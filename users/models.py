@@ -55,7 +55,6 @@ class User(AbstractBaseUser):
 
         # 새로운 비밀번호를 해시하여 저장
         self.password = make_password(raw_password)
-        self._password = raw_password
 
     def check_previous_password(self, raw_password):
         """
