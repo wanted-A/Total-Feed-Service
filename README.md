@@ -8,6 +8,13 @@
 ```py
 SECRET_KEY="secret-key"
 ```
+---
+
+## Installation 
+
+```py
+pip install -r requirements.txt
+```
 
 ---
   
@@ -24,10 +31,6 @@ SECRET_KEY="secret-key"
 [![Notion](https://img.shields.io/badge/Notion-%23000000.svg?style=for-the-badge&logo=notion&logoColor=white)](https://www.notion.so/ssu-uky/Team-A-c365d2c6babf4d5494b108fa66b39c1f?pvs=4)
 
 ---
-
-<!-- ## Installation 
-
---- -->
 
 ## Authors
 - [이수현](https://github.com/ssu-uky)
