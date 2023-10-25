@@ -118,6 +118,7 @@ AUTH_PASSWORD_VALIDATORS = [
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         # 전역 설정중 (IsAuthenticated 를 모든 views 에 적용)
+        # 만약 불필요 할 경우, 필요한 views 에서 permission_classes 를 지정하면 됨
         "rest_framework.permissions.IsAuthenticated",
     ],
 }
