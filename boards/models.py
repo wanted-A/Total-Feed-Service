@@ -11,17 +11,31 @@ class Board(CommonModel):
         INSTAGRAM = "instagram", "Instagram"
         THREADS = "threads", "Threads"
 
+    content_id = models.AutoField(
+        primary_key=True,
+        editable=False,
+    )
+
+    owner = models.ForeignKey(
+        "users.User",
+        on_delete=models.CASCADE,
+        related_name="boards",
+        blank=False,
+    )
+
     title = models.CharField(
         max_length=80,
         blank=False,
         null=False,
     )
+
     feed_type = models.CharField(
         max_length=30,
         choices=FeedChoices.choices,
         blank=False,
         null=False,
     )
+
     content = models.TextField(
         max_length=500,
         blank=True,
@@ -30,8 +44,8 @@ class Board(CommonModel):
 
     hashtags = models.TextField(
         max_length=500,
-        blank=True,
-        null=True,
+        blank=False,
+        null=False,
     )
 
     viewcounts = models.PositiveIntegerField(default=0)
