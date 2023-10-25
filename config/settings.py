@@ -114,6 +114,13 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# DRF 설정
+REST_FRAMEWORK = {
+    "DEFAULT_PERMISSION_CLASSES": [
+        # 전역 설정중 (IsAuthenticated 를 모든 views 에 적용)
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/

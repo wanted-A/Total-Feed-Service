@@ -3,7 +3,7 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.core.validators import BaseValidator
 
 
-class UsersManager(BaseUserManager):
+class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
             raise ValueError("The Email field must be set")
@@ -31,7 +31,7 @@ class ImageSizeValidator(BaseValidator):
         return x.file.size
 
 
-class Users(AbstractBaseUser):
+class User(AbstractBaseUser):
     username = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
     previous_password = models.CharField(max_length=255, blank=True, null=True)
@@ -44,7 +44,7 @@ class Users(AbstractBaseUser):
     is_approved = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
 
-    objects = UsersManager()
+    objects = UserManager()
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username"]
