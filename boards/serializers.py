@@ -1,8 +1,8 @@
-from rest_framework.serializers import ModelSerializer
+from rest_framework import serializers
+from .models import Board
 
-from boards.models import Board
 
-class BoardListSerializer(ModelSerializer):
+class BoardListSerializer(serializers.ModelSerializer):
     """
     Assignee : 기연
     """
@@ -10,3 +10,10 @@ class BoardListSerializer(ModelSerializer):
     class Meta:
         model = Board
         fields = "__all__"
+      
+      
+class AnalyticsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Board
+        fields = '__all__'
+
