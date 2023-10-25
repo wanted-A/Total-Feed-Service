@@ -170,4 +170,4 @@ SIMPLE_JWT = {
 }
 
 # users 설정
-AUTH_USER_MODEL = "users.Users"
+AUTH_USER_MODEL = "users.User"

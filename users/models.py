@@ -12,6 +12,8 @@ class MimeTypeValidator:
         self.mimetypes = mimetypes
 
     def __call__(self, value):
+        if not value:
+            return
         try:
             mime = magic.Magic(mime=True)
             file_mime = mime.from_buffer(value.read())
@@ -27,8 +29,10 @@ class MimeTypeValidator:
 
 # 이미지 검증기를 클래스로 변경
 class ImageSizeValidator(BaseValidator):
-    limit = 2 * 1024 * 1024  # 2MB
-    message = "File too large. Size should not exceed 2 MiB."
+    message = "너무 큽니다...2MB 이하로 사진 용량을 줄여주세요."
+
+    def __init__(self, limit_value=2 * 1024 * 1024, **kwargs):  # 2MB의 기본값 추가
+        super().__init__(limit_value, **kwargs)  # 부모 클래스의 __init__ 호출
 
     def compare(self, a, b):
         return a > b
@@ -79,3 +83,10 @@ class User(AbstractBaseUser):
 
     def get_short_name(self):
         return self.username.split()[0] if self.username else self.email.split("@")[0]
+
+    def save(self, *args, **kwargs):
+        if self.profile_picture:
+            # 수동으로 실행하도록 변경 (마이그레이션 직렬화 문제)
+            validator = MimeTypeValidator(["image/jpeg", "image/png"])
+            validator(self.profile_picture)
+        super().save(*args, **kwargs)
