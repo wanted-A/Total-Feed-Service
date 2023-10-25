@@ -2,7 +2,12 @@
 
 # 🪄 A-Team
 <!-- skeleton code -->
-**Introduce A-Team**
+<!-- **Introduce A-Team** -->
+
+- https://djecrety.ir/ 에서 django secret_key 생성 후 .env/SECRET_KEY에 복사
+```py
+SECRET_KEY="secret-key"
+```
 
 ---
   
