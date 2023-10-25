@@ -58,7 +58,7 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser):
-    username = models.CharField(max_length=20)
+    username = models.CharField(max_length=20, unique=True)
     email = models.EmailField(unique=True)
     previous_password = models.CharField(max_length=50, blank=True, null=True)
     profile_picture = models.ImageField(
@@ -75,8 +75,8 @@ class User(AbstractBaseUser):
 
     objects = UserManager()
 
-    USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["username"]
+    USERNAME_FIELD = "username"
+    REQUIRED_FIELDS = ["email"]
 
     def get_full_name(self):
         return self.username
