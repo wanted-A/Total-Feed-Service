@@ -59,16 +59,17 @@ class User(AbstractBaseUser):
         """
 
         # 기존 비밀번호가 있을 때만 이전 비밀번호로 저장
-        if self.password:
+        if self.password and self.pk:  # self.pk를 확인하여 데이터베이스에 이미 저장되었는지 확인.
             PreviousPassword.objects.create(user=self, password=self.password)
 
-            # 이전 비밀번호가 설정된 최대 개수를 초과하면 가장 오래된 것부터 삭제
-            while self.previouspassword_set.count() > MAX_PREVIOUS_PASSWORDS:
-                self.previouspassword_set.earliest("created_at").delete()
+            # 이전 비밀번호가 설정된 최대 개수를 초과 시, 가장 오래된 것부터 삭제
+            while self.PreviousPassword_set.count() > MAX_PREVIOUS_PASSWORDS:
+                self.PreviousPassword_set.earliest("created_at").delete()
 
         # 새로운 비밀번호를 해시하여 저장
         self.password = make_password(raw_password)
-        self.save(update_fields=["password"])
+        if self.pk:  # 여기도 self.pk를 확인합니다.
+            self.save(update_fields=["password"])
 
     def check_previous_passwords(self, raw_password):
         """
@@ -76,5 +77,5 @@ class User(AbstractBaseUser):
         """
         return any(
             check_password(raw_password, prev_pass.password)
-            for prev_pass in self.previouspassword_set.all()
+            for prev_pass in self.PreviousPassword_set.all()
         )
