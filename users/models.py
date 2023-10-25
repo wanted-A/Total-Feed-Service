@@ -19,12 +19,20 @@ class UserManager(BaseUserManager):
         return self.create_user(email, password, **extra_fields)
 
 
+MAX_PREVIOUS_PASSWORDS = 2  # 2개 까지는 중복 비밀번호 불허하나, 3개부터는 재사용을 허가합니다.
+
+
+class PreviousPassword(models.Model):
+    user = models.ForeignKey("User", on_delete=models.CASCADE)
+    password = models.CharField(max_length=128)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
 class User(AbstractBaseUser):
     username = models.CharField(max_length=20, unique=True, blank=False)
     first_name = models.CharField(max_length=30, blank=True)
     last_name = models.CharField(max_length=30, blank=True)
     email = models.EmailField(unique=True)
-    previous_password = models.CharField(max_length=50, blank=True, null=True)
     profile_picture = models.ImageField(
         upload_to="assets/profile_pictures",
         blank=True,
@@ -50,14 +58,23 @@ class User(AbstractBaseUser):
         비밀번호를 해시하여 저장
         """
 
-        # 이전 비밀번호(1개 이력만)를 저장
-        self.previous_password = self.password
+        # 기존 비밀번호가 있을 때만 이전 비밀번호로 저장
+        if self.password:
+            PreviousPassword.objects.create(user=self, password=self.password)
+
+            # 이전 비밀번호가 설정된 최대 개수를 초과하면 가장 오래된 것부터 삭제
+            while self.previouspassword_set.count() > MAX_PREVIOUS_PASSWORDS:
+                self.previouspassword_set.earliest("created_at").delete()
 
         # 새로운 비밀번호를 해시하여 저장
         self.password = make_password(raw_password)
+        self.save(update_fields=["password"])
 
-    def check_previous_password(self, raw_password):
+    def check_previous_passwords(self, raw_password):
         """
-        이전 비밀번호와 현재 입력된 비밀번호를 비교하는 메서드
+        입력된 비밀번호가 이전 비밀번호 중 하나와 일치하는지 확인
         """
-        return check_password(raw_password, self.previous_password)
+        return any(
+            check_password(raw_password, prev_pass.password)
+            for prev_pass in self.previouspassword_set.all()
+        )
