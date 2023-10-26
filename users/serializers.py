@@ -22,6 +22,43 @@ class UserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("비밀번호는 최소 한 개의 숫자를 포함해야 합니다.")
         if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", value):
             raise serializers.ValidationError("비밀번호는 최소 한 개의 특수문자를 포함해야 합니다.")
+
+        # 흔한 비밀번호 적용 시 에러 표시
+        common_passwords = [
+            "123456",
+            "password",
+            "123456789",
+            "12345",
+            "12345678",
+            "qwerty",
+            "1234567",
+            "111111",
+            "1234567890",
+            "123123",
+            "abc123",
+            "1234",
+            "password1",
+            "iloveyou",
+            "1q2w3e4r",
+            "000000",
+            "qwerty123",
+            "zaq12wsx",
+            "dragon",
+            "sunshine",
+            "princess",
+            "letmein",
+            "654321",
+            "monkey",
+            "27653",
+            "1qaz2wsx",
+            "123321",
+            "qwertyuiop",
+            "superman",
+            "asdfghjkl",
+        ]
+        if value in common_passwords:
+            raise serializers.ValidationError("이미 유출된 비밀번호입니다. 다른 비밀번호를 선택하세요.")
+
         return value
 
     def create(self, validated_data):
