@@ -23,7 +23,7 @@ class UserManager(BaseUserManager):
         return self.create_user(email, password, **extra_fields)
 
 
-MAX_PREVIOUS_PASSWORDS = 2  # 2개 까지는 중복 비밀번호 불허하나, 3개부터는 재사용을 허가합니다.
+MAX_PREVIOUS_PASSWORDS = 2  # 2개 까지는 중복 비밀번호 불허하나, 3개부터는 재사용을 허가.
 
 
 class PreviousPassword(models.Model):
