@@ -37,8 +37,8 @@ jobs:
       run: |
         sudo apt-get -yqq install libpq-dev postgresql
         sudo systemctl start postgresql
-        sudo -u postgres psql -c "CREATE USER ${{ secrets.DB_USER }} WITH PASSWORD '${{ secrets.DB_PASSWORD }}';"
-        sudo -u postgres psql -c "CREATE DATABASE ${{ secrets.DB_NAME }};"
+        sudo -u postgres psql -c "DO $$ BEGIN CREATE ROLE ${{ secrets.DB_USER }} WITH LOGIN PASSWORD '${{ secrets.DB_PASSWORD }}'; EXCEPTION WHEN DUPLICATE_OBJECT THEN END $$;"
+        sudo -u postgres psql -c "DO $$ BEGIN CREATE DATABASE ${{ secrets.DB_NAME }}; EXCEPTION WHEN DUPLICATE_DATABASE THEN END $$;"
         sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE ${{ secrets.DB_NAME }} TO ${{ secrets.DB_USER }};"
 
     - name: Run Tests
