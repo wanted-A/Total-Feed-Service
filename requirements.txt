@@ -17,4 +17,3 @@ PyYAML==6.0.1
 sqlparse==0.4.4
 tzdata==2023.3
 uritemplate==4.1.1
-typing_extensions==4.8.0
