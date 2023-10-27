@@ -54,12 +54,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     USERNAME_FIELD = "username"
     REQUIRED_FIELDS = ["email"]
 
-    def get_full_name(self):
-        full_name = f"{self.first_name} {self.last_name}".strip()
-        return full_name or self.username
+    # def get_full_name(self):
+    #     full_name = f"{self.first_name} {self.last_name}".strip()
+    #     return full_name or self.username
 
-    def get_short_name(self):
-        return self.first_name or self.username.split()[0]
+    # def get_short_name(self):
+    #     return self.first_name or self.username.split()[0]
 
     def set_password(self, raw_password):
         """
