@@ -4,36 +4,55 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework import permissions
 from rest_framework.views import APIView
-from rest_framework.generics import ListAPIView
-from rest_framework.filters import OrderingFilter
 from rest_framework.response import Response
 from rest_framework.exceptions import NotFound, PermissionDenied
 
-from .models import Board
+from boards.pagination import CustomPageNumberPagination
+
+from .models import Board, Hashtag
 from .serializers import BoardSerializer, BoardListSerializer
-from boards.filters import BoardFilter, CustomSearchFilter
 
 from django.db.models import Count, Sum
-from django_filters.rest_framework import DjangoFilterBackend
 
 from datetime import datetime, timedelta
-
+from django.db.models import Q
 
 # api/v1/boards/?query_params
-class BoardsListAPIView(ListAPIView):
-    """
-    Assignee : 기연
+class BoardsListAPIView(APIView):
 
-    GET : 게시글 목록 조회(검색)
-    """
-    
-    queryset = Board.objects.all()
-    serializer_class = BoardListSerializer
+    def get(self, request):
+        hashtag = request.query_params.get('hashtag', request.user) # 태그 검색 키워드 / defalut : 본인계정
+        type = request.query_params.get('type', '') # feed_type : facebook, instagram, etc.
+        order_by = request.query_params.get('order_by', 'created_at') # 정렬 기준
+        search_by = request.query_params.get('search_by', 'title,content') # 키워드 검색 기준(title, content, title+content)
+        search = request.query_params.get('search', '') # 검색 키워드
 
-    filter_backends = [DjangoFilterBackend, CustomSearchFilter, OrderingFilter]
-    filterset_class = BoardFilter
-    search_fields = ['title', 'content']
-    ordering_fields = ['created_at', 'updated_at', 'likecounts', 'viewcounts', 'sharecounts']
+        query = Q()
+        
+        # hashtag
+        hashtag_instance = Hashtag.objects.get(tag__exact=hashtag)
+        queryset = hashtag_instance.tagging.all()
+
+        # type
+        if type: query |= Q(feed_type=type)
+
+        # search
+        if search:
+            if search_by == 'title':
+                query |= Q(title__contains=search)
+            elif search_by == 'content':
+                query |= Q(content__contains=search)
+            else:
+                query |= (Q(title__contains=search) & Q(content__contains=search))
+        
+        queryset = queryset.filter(query).order_by(order_by)
+
+        # 페이지네이션 적용
+        paginator = CustomPageNumberPagination()
+        paginated_data = paginator.paginate_queryset(queryset=queryset, request=request)
+
+        serializer = BoardListSerializer(paginated_data, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
     
     
 class BoardDetailView(APIView):
