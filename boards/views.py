@@ -19,6 +19,31 @@ from drf_yasg import openapi
 from datetime import datetime, timedelta
 
 
+# api/v1/boards/write/
+class BoardWriteView(APIView):
+    # board 작성 view
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        return Response(
+            {"message : title, feed_type, content(선택), hashtags(선택) 를 입력해주세요."},
+            status=status.HTTP_200_OK,
+        )
+
+    def post(self, request):
+        serializer = BoardSerializer(data=request.data)
+
+        if serializer.is_valid():
+            serializer.save(owner=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+
 # api/v1/boards/?query_params
 class BoardsListAPIView(ListAPIView):
     """
@@ -42,10 +67,9 @@ class BoardsListAPIView(ListAPIView):
     ]
 
 
+# api/v1/boards/detail/<int:content_id>/
 class BoardDetailView(APIView):
     # board 상세 조회 view
-
-    permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self, content_id):
         try:
@@ -55,7 +79,12 @@ class BoardDetailView(APIView):
 
     def get(self, request, content_id):
         board = self.get_object(content_id)
+
+        board.viewcounts += 1
+        board.save()
+
         serializer = BoardSerializer(board)
+
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def put(self, request, content_id):

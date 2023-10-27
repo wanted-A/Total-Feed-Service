@@ -44,8 +44,8 @@ class Board(CommonModel):
 
     hashtags = models.TextField(
         max_length=500,
-        blank=False,
-        null=False,
+        blank=True,
+        null=True,
     )
 
     viewcounts = models.PositiveIntegerField(default=0)
