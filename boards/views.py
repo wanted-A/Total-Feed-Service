@@ -1,6 +1,3 @@
-from django.shortcuts import render
-from django.contrib.auth import get_user_model
-
 from rest_framework import status
 from rest_framework import permissions
 from rest_framework.views import APIView
@@ -14,11 +11,40 @@ from .serializers import BoardSerializer, BoardListSerializer
 
 from django.db.models import Count, Sum
 
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+
 from datetime import datetime, timedelta
 from django.db.models import Q
 
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+
+
+# api/v1/boards/write/
+class BoardWriteView(APIView):
+    # board 작성 view
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        return Response(
+            {"message : title, feed_type, content(선택), hashtags(선택) 를 입력해주세요."},
+            status=status.HTTP_200_OK,
+        )
+
+    def post(self, request):
+        serializer = BoardSerializer(data=request.data)
+
+        if serializer.is_valid():
+            serializer.save(owner=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
 
 # api/v1/boards/?query_params
 class BoardsListAPIView(APIView):
@@ -97,12 +123,11 @@ class BoardsListAPIView(APIView):
 
         serializer = BoardListSerializer(paginated_data, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
-    
+
+      
+# api/v1/boards/detail/<int:content_id>/
 class BoardDetailView(APIView):
     # board 상세 조회 view
-
-    permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self, content_id):
         try:
@@ -112,7 +137,12 @@ class BoardDetailView(APIView):
 
     def get(self, request, content_id):
         board = self.get_object(content_id)
+
+        board.viewcounts += 1
+        board.save()
+
         serializer = BoardSerializer(board)
+
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def put(self, request, content_id):
@@ -143,99 +173,175 @@ class BoardDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+# api/v1/boards/analytics/?query_params
 class AnalyticsView(APIView):
-    def get(self, request):
-        hashtag = request.query_params.get('hashtag', request.user)
-        search_type = request.query_params.get('type', 'date')
+    permission_classes = [permissions.IsAuthenticated]
 
-        end = datetime.strptime(request.query_params.get(
-            'end'), '%Y-%m-%d') if request.query_params.get('end') is not None else datetime.now()
+    query_hashtag = openapi.Parameter(
+        "hashtag", openapi.IN_QUERY, type=openapi.TYPE_STRING, description="검색할 해시태그"
+    )
+    query_type = openapi.Parameter(
+        "type",
+        openapi.IN_QUERY,
+        type=openapi.TYPE_STRING,
+        description="통계 범위 조건(date: 일별 통계 / hour: 시간별 통계)",
+        required=True,
+        default="date",
+    )
+    query_start = openapi.Parameter(
+        "start",
+        openapi.IN_QUERY,
+        type=openapi.TYPE_STRING,
+        description="통계 시작일(YYYY-MM-DD), 미입력시 오늘로부터 7일전 날짜로 설정",
+        default=datetime.strftime(datetime.now() - timedelta(days=7), "%Y-%m-%d"),
+    )
+    query_end = openapi.Parameter(
+        "end",
+        openapi.IN_QUERY,
+        type=openapi.TYPE_STRING,
+        description="통계 종료일(YYYY-MM-DD), 미입력시 오늘 날짜로 설정",
+        default=datetime.strftime(datetime.now(), "%Y-%m-%d"),
+    )
+    query_value = openapi.Parameter(
+        "value",
+        openapi.IN_QUERY,
+        type=openapi.TYPE_STRING,
+        description="통계 항목(count: 게시물 갯수 / view_count: 게시물 조회수 합계 / like_count: 게시물 좋아요수 합계 / share_count: 게시물 공유수 합계)",
+        default="count",
+    )
+
+    @swagger_auto_schema(
+        operation_id="통계",
+        operation_description="게시물에 대한 통계를 제공합니다.",
+        manual_parameters=[
+            query_hashtag,
+            query_type,
+            query_start,
+            query_end,
+            query_value,
+        ],
+    )
+    def get(self, request):
+        hashtag = request.query_params.get("hashtag", request.user)
+        search_type = request.query_params.get("type", "date")
+
+        end = (
+            datetime.strptime(request.query_params.get("end"), "%Y-%m-%d")
+            if request.query_params.get("end") is not None
+            else datetime.now()
+        )
         end = end.replace(hour=23, minute=59, second=59)
 
-        start = datetime.strptime(request.query_params.get(
-            'start'), '%Y-%m-%d') if request.query_params.get('start') is not None else datetime.now() - timedelta(days=7)
-        start = datetime.now() - timedelta(days=7) if (end -
-                                                       start) > timedelta(days=7) else start
+        start = (
+            datetime.strptime(request.query_params.get("start"), "%Y-%m-%d")
+            if request.query_params.get("start") is not None
+            else datetime.now() - timedelta(days=7)
+        )
+        start = (
+            datetime.now() - timedelta(days=7)
+            if (end - start) > timedelta(days=7)
+            else start
+        )
         start = start.replace(hour=0, minute=0, second=0, microsecond=0)
 
-        value = request.query_params.get('value', 'count')
+        value = request.query_params.get("value", "count")
 
         result = {}
-        if value == 'count':
-            if search_type == 'date':
+        if value == "count":
+            if search_type == "date":
                 while start <= end:
-                    result[datetime.strftime(start, '%Y-%m-%d')] = Board.objects.filter(
+                    result[datetime.strftime(start, "%Y-%m-%d")] = Board.objects.filter(
                         hashtags__icontains=hashtag,
-                        created_at__range=[start, start.replace(
-                            hour=23, minute=59, second=59)]
-                    ).aggregate(board_count=Count('title'))
+                        created_at__range=[
+                            start,
+                            start.replace(hour=23, minute=59, second=59),
+                        ],
+                    ).aggregate(board_count=Count("title"))
 
                     start += timedelta(days=1)
             else:
                 while start <= end:
-                    result[datetime.strftime(start, '%Y-%m-%d %H:%M:%S')] = Board.objects.filter(
+                    result[
+                        datetime.strftime(start, "%Y-%m-%d %H:%M:%S")
+                    ] = Board.objects.filter(
                         hashtags__icontains=hashtag,
-                        created_at__range=[
-                            start, start.replace(minute=59, second=59)]
-                    ).aggregate(board_count=Count('title'))
+                        created_at__range=[start, start.replace(minute=59, second=59)],
+                    ).aggregate(
+                        board_count=Count("title")
+                    )
 
                     start += timedelta(hours=1)
-        elif value == 'view_count':
-            if search_type == 'date':
+        elif value == "view_count":
+            if search_type == "date":
                 while start <= end:
-                    result[datetime.strftime(start, '%Y-%m-%d')] = Board.objects.filter(
+                    result[datetime.strftime(start, "%Y-%m-%d")] = Board.objects.filter(
                         hashtags__icontains=hashtag,
-                        created_at__range=[start, start.replace(
-                            hour=23, minute=59, second=59)]
-                    ).aggregate(total_likes=Sum('viewcounts'))
+                        created_at__range=[
+                            start,
+                            start.replace(hour=23, minute=59, second=59),
+                        ],
+                    ).aggregate(total_likes=Sum("viewcounts"))
 
                     start += timedelta(days=1)
             else:
                 while start <= end:
-                    result[datetime.strftime(start, '%Y-%m-%d %H:%M:%S')] = Board.objects.filter(
+                    result[
+                        datetime.strftime(start, "%Y-%m-%d %H:%M:%S")
+                    ] = Board.objects.filter(
                         hashtags__icontains=hashtag,
-                        created_at__range=[
-                            start, start.replace(minute=59, second=59)]
-                    ).aggregate(total_likes=Sum('viewcounts'))
+                        created_at__range=[start, start.replace(minute=59, second=59)],
+                    ).aggregate(
+                        total_likes=Sum("viewcounts")
+                    )
 
                     start += timedelta(hours=1)
-        elif value == 'like_count':
-            if search_type == 'date':
+        elif value == "like_count":
+            if search_type == "date":
                 while start <= end:
-                    result[datetime.strftime(start, '%Y-%m-%d')] = Board.objects.filter(
+                    result[datetime.strftime(start, "%Y-%m-%d")] = Board.objects.filter(
                         hashtags__icontains=hashtag,
-                        created_at__range=[start, start.replace(
-                            hour=23, minute=59, second=59)]
-                    ).aggregate(total_likes=Sum('likecounts'))
+                        created_at__range=[
+                            start,
+                            start.replace(hour=23, minute=59, second=59),
+                        ],
+                    ).aggregate(total_likes=Sum("likecounts"))
 
                     start += timedelta(days=1)
             else:
                 while start <= end:
-                    result[datetime.strftime(start, '%Y-%m-%d %H:%M:%S')] = Board.objects.filter(
+                    result[
+                        datetime.strftime(start, "%Y-%m-%d %H:%M:%S")
+                    ] = Board.objects.filter(
                         hashtags__icontains=hashtag,
-                        created_at__range=[
-                            start, start.replace(minute=59, second=59)]
-                    ).aggregate(total_likes=Sum('likecounts'))
+                        created_at__range=[start, start.replace(minute=59, second=59)],
+                    ).aggregate(
+                        total_likes=Sum("likecounts")
+                    )
 
                     start += timedelta(hours=1)
         else:
-            if search_type == 'date':
+            if search_type == "date":
                 while start <= end:
-                    result[datetime.strftime(start, '%Y-%m-%d')] = Board.objects.filter(
+                    result[datetime.strftime(start, "%Y-%m-%d")] = Board.objects.filter(
                         hashtags__icontains=hashtag,
-                        created_at__range=[start, start.replace(
-                            hour=23, minute=59, second=59)]
-                    ).aggregate(total_shares=Sum('sharecounts'))
+                        created_at__range=[
+                            start,
+                            start.replace(hour=23, minute=59, second=59),
+                        ],
+                    ).aggregate(total_shares=Sum("sharecounts"))
 
                     start += timedelta(days=1)
             else:
                 while start <= end:
-                    result[datetime.strftime(start, '%Y-%m-%d %H:%M:%S')] = Board.objects.filter(
+                    result[
+                        datetime.strftime(start, "%Y-%m-%d %H:%M:%S")
+                    ] = Board.objects.filter(
                         hashtags__icontains=hashtag,
-                        created_at__range=[
-                            start, start.replace(minute=59, second=59)]
-                    ).aggregate(total_shares=Sum('sharecounts'))
+                        created_at__range=[start, start.replace(minute=59, second=59)],
+                    ).aggregate(
+                        total_shares=Sum("sharecounts")
+                    )
 
                     start += timedelta(hours=1)
 
-        return Response({'result': result}, status=status.HTTP_200_OK)
+        return Response({"result": result, "status": status.HTTP_200_OK})
