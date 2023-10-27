@@ -79,7 +79,12 @@ class BoardDetailView(APIView):
 
     def get(self, request, content_id):
         board = self.get_object(content_id)
+
+        board.viewcounts += 1
+        board.save()
+
         serializer = BoardSerializer(board)
+
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def put(self, request, content_id):
