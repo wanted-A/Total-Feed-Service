@@ -32,7 +32,6 @@ THIRD_PARTY_APPS = [
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
     "drf_yasg",  # swagger
-    "django_filters",
 ]
 
 CUSTOM_APPS = [
@@ -176,11 +175,6 @@ AUTH_USER_MODEL = "users.User"
 
 # REST_FRAMEWORK
 REST_FRAMEWORK = {
-    "DEFAULT_FILTER_BACKENDS": [
-        "django_filters.rest_framework.DjangoFilterBackend",
-        "rest_framework.filters.SearchFilter",
-        "rest_framework.filters.OrderingFilter",
-    ],
     "DEFAULT_PAGINATION_CLASS": "boards.pagination.CustomPageNumberPagination",
     "PAGE_SIZE": 10,
 }
