@@ -156,7 +156,7 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         # 전역 설정중 (IsAuthenticated 를 모든 views 에 적용)
         # 만약 불필요 할 경우, 해당 view class 에서 permission_classes 를 지정하면 됨
-        "rest_framework.permissions.AllowAny",
+        "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
