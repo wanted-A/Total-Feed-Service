@@ -17,9 +17,53 @@ from django.db.models import Count, Sum
 from datetime import datetime, timedelta
 from django.db.models import Q
 
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+
 # api/v1/boards/?query_params
 class BoardsListAPIView(APIView):
+    """
+    Assignee : 기연
+    
+    게시글 목록 조회 및 검색 기능
+    """
+    permission_classes = [permissions.IsAuthenticated]
 
+    query_hashtag = openapi.Parameter(
+        "hashtag", openapi.IN_QUERY, type=openapi.TYPE_STRING, description="검색할 해시태그"
+    )
+    query_type = openapi.Parameter(
+        "type", openapi.IN_QUERY, type=openapi.TYPE_STRING, description="검색할 feed type"
+    )
+    query_order_by = openapi.Parameter(
+        "order_by", openapi.IN_QUERY, type=openapi.TYPE_STRING, description="정렬 기준", default="created_at"
+    )
+    query_search_by = openapi.Parameter(
+        "search_by", openapi.IN_QUERY, type=openapi.TYPE_STRING, description="검색기준", default="title,content"
+    )
+    query_search = openapi.Parameter(
+        "search", openapi.IN_QUERY, type=openapi.TYPE_STRING, description="검색 키워드"
+    )
+    query_page = openapi.Parameter(
+        "page", openapi.IN_QUERY, type=openapi.TYPE_NUMBER, description="페이지번호"
+    )
+    query_page_count = openapi.Parameter(
+        "page_count", openapi.IN_QUERY, type=openapi.TYPE_NUMBER, description="페이지당 게시글 갯수"
+    )
+
+    @swagger_auto_schema(
+        operation_id="게시글 목록 검색",
+        operation_description="검색/정렬 기준에 대한 게시글 목록을 조회합니다.",
+        manual_parameters=[
+            query_hashtag,
+            query_type,
+            query_order_by,
+            query_search_by,
+            query_search,
+            query_page,
+            query_page_count
+        ],
+    )
     def get(self, request):
         hashtag = request.query_params.get('hashtag', request.user) # 태그 검색 키워드 / defalut : 본인계정
         type = request.query_params.get('type', '') # feed_type : facebook, instagram, etc.
