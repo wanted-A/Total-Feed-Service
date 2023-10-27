@@ -6,6 +6,8 @@ from django.contrib.auth.models import (
 )
 from django.contrib.auth.hashers import make_password, check_password
 
+# from .utils import send_signup_email
+
 
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -34,14 +36,14 @@ class PreviousPassword(models.Model):
 
 class User(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(max_length=20, unique=True, blank=False)
-    first_name = models.CharField(max_length=30, blank=True)
-    last_name = models.CharField(max_length=30, blank=True)
+    # first_name = models.CharField(max_length=30, blank=True)
+    # last_name = models.CharField(max_length=30, blank=True)
     email = models.EmailField(unique=True)
-    profile_picture = models.ImageField(
-        upload_to="assets/profile_pictures",
-        blank=True,
-        null=True,
-    )
+    # profile_picture = models.ImageField(
+    #     upload_to="assets/profile_pictures",
+    #     blank=True,
+    #     null=True,
+    # )
     is_approved = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -85,3 +87,10 @@ class User(AbstractBaseUser, PermissionsMixin):
             check_password(raw_password, prev_pass.password)
             for prev_pass in self.PreviousPassword_set.all()
         )
+
+    # """
+    # 이메일 발송
+    # """
+
+    # def send_signup_email(self, verification_code):
+    #     send_signup_email(self.email, verification_code)
