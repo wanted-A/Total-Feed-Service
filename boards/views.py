@@ -1,6 +1,3 @@
-from django.shortcuts import render
-from django.contrib.auth import get_user_model
-
 from rest_framework import status
 from rest_framework import permissions
 from rest_framework.views import APIView
@@ -11,10 +8,13 @@ from rest_framework.exceptions import NotFound, PermissionDenied
 
 from .models import Board
 from .serializers import BoardSerializer, BoardListSerializer
-from boards.filters import BoardFilter, CustomSearchFilter
+from .filters import BoardFilter, CustomSearchFilter
 
 from django.db.models import Count, Sum
 from django_filters.rest_framework import DjangoFilterBackend
+
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 from datetime import datetime, timedelta
 
@@ -115,7 +115,54 @@ class BoardDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+# api/v1/boards/analytics/?query_params
 class AnalyticsView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    query_hashtag = openapi.Parameter(
+        "hashtag", openapi.IN_QUERY, type=openapi.TYPE_STRING, description="검색할 해시태그"
+    )
+    query_type = openapi.Parameter(
+        "type",
+        openapi.IN_QUERY,
+        type=openapi.TYPE_STRING,
+        description="통계 범위 조건(date: 일별 통계 / hour: 시간별 통계)",
+        required=True,
+        default="date",
+    )
+    query_start = openapi.Parameter(
+        "start",
+        openapi.IN_QUERY,
+        type=openapi.TYPE_STRING,
+        description="통계 시작일(YYYY-MM-DD), 미입력시 오늘로부터 7일전 날짜로 설정",
+        default=datetime.strftime(datetime.now() - timedelta(days=7), "%Y-%m-%d"),
+    )
+    query_end = openapi.Parameter(
+        "end",
+        openapi.IN_QUERY,
+        type=openapi.TYPE_STRING,
+        description="통계 종료일(YYYY-MM-DD), 미입력시 오늘 날짜로 설정",
+        default=datetime.strftime(datetime.now(), "%Y-%m-%d"),
+    )
+    query_value = openapi.Parameter(
+        "value",
+        openapi.IN_QUERY,
+        type=openapi.TYPE_STRING,
+        description="통계 항목(count: 게시물 갯수 / view_count: 게시물 조회수 합계 / like_count: 게시물 좋아요수 합계 / share_count: 게시물 공유수 합계)",
+        default="count",
+    )
+
+    @swagger_auto_schema(
+        operation_id="통계",
+        operation_description="게시물에 대한 통계를 제공합니다.",
+        manual_parameters=[
+            query_hashtag,
+            query_type,
+            query_start,
+            query_end,
+            query_value,
+        ],
+    )
     def get(self, request):
         hashtag = request.query_params.get("hashtag", request.user)
         search_type = request.query_params.get("type", "date")
@@ -239,4 +286,4 @@ class AnalyticsView(APIView):
 
                     start += timedelta(hours=1)
 
-        return Response({"result": result}, status=status.HTTP_200_OK)
+        return Response({"result": result, "status": status.HTTP_200_OK})
