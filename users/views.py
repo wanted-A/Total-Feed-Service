@@ -1,45 +1,3 @@
-# from rest_framework import status
-# from rest_framework.views import APIView
-# from rest_framework.response import Response
-# from rest_framework.permissions import AllowAny
-# from django.contrib.auth import get_user_model
-# from .serializers import UserSerializer, TokenObtainPairSerializer
-# from rest_framework_simplejwt.views import TokenObtainPairView
-
-
-# from rest_framework import status
-# from rest_framework.views import APIView
-# from rest_framework.response import Response
-# from rest_framework_simplejwt.tokens import RefreshToken
-# from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
-
-
-# class UserCreateView(APIView):
-#     permission_classes = [AllowAny]
-
-#     def post(self, request):
-#         serializer = UserSerializer(data=request.data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data, status=status.HTTP_201_CREATED)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-# class LoginView(TokenObtainPairView):
-#     serializer_class = TokenObtainPairSerializer
-
-
-# class LogoutView(APIView):
-#     def post(self, request):
-#         token = request.auth
-#         if token:
-#             # 블랙리스트에 토큰을 추가하여 무효화
-#             refresh_token = RefreshToken(token)
-#             refresh_token.blacklist()
-#             return Response(status=status.HTTP_200_OK)
-#         return Response(status=status.HTTP_400_BAD_REQUEST)
-
-
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.views import APIView
 from rest_framework import status
@@ -113,22 +71,6 @@ class ChangePasswordView(APIView):
         return Response(
             {"detail": "Password changed successfully."}, status=status.HTTP_200_OK
         )
-
-
-# class LogoutView(APIView):
-#     """
-#     사용자 로그아웃 API
-#     """
-
-#     permission_classes = [permissions.IsAuthenticated]
-
-
-#     def post(self, request):
-#         refresh_token = request.auth.refresh_token
-#         BlacklistedToken.objects.create(token=refresh_token)
-#         return Response(
-#             {"message": "Successfully logged out"}, status=status.HTTP_200_OK
-#         )
 
 
 class LogoutView(APIView):

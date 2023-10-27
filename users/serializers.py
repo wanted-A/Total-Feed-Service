@@ -1,35 +1,3 @@
-# from django.contrib.auth import get_user_model
-# from rest_framework import serializers
-# from rest_framework_simplejwt.tokens import RefreshToken
-
-
-# class UserSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = get_user_model()
-#         fields = ("id", "username", "password")
-#         extra_kwargs = {"password": {"write_only": True}}
-
-#     def create(self, validated_data):
-#         user = get_user_model().objects.create_user(
-#             username=validated_data["username"], password=validated_data["password"]
-#         )
-#         return user
-
-
-# class TokenObtainPairSerializer(serializers.Serializer):
-#     username = serializers.CharField()
-#     password = serializers.CharField(write_only=True)
-#     tokens = serializers.SerializerMethodField()
-
-#     def get_tokens(self, obj):
-#         user = self.context["request"].user
-#         refresh = RefreshToken.for_user(user)
-#         return {
-#             "refresh": str(refresh),
-#             "access": str(refresh.access_token),
-#         }
-
-
 from rest_framework import serializers
 from .models import User
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
