@@ -1,6 +1,7 @@
 from django.contrib import admin
 from .models import Board
 
+
 @admin.register(Board)
 class BoardAdmin(admin.ModelAdmin):
     list_display = (
@@ -16,5 +17,5 @@ class BoardAdmin(admin.ModelAdmin):
         "title",
         "feed_type",
     )
-    
+
     search_fields = ("title", "feed_type", "user__username")
