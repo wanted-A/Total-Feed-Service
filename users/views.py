@@ -32,45 +32,45 @@ class ChangePasswordSerializer(serializers.Serializer):
         return UserSerializer().validate_password(value)
 
 
-class ChangePasswordView(APIView):
-    """
-    비밀번호 변경 API
+# class ChangePasswordView(APIView):
+#     """
+#     비밀번호 변경 API
 
-    PATCH: 현재 사용자의 비밀번호를 변경합니다.
-    """
+#     PATCH: 현재 사용자의 비밀번호를 변경합니다.
+#     """
 
-    permission_classes = [permissions.IsAuthenticated]
+#     permission_classes = [permissions.IsAuthenticated]
 
-    def patch(self, request):
-        serializer = ChangePasswordSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#     def patch(self, request):
+#         serializer = ChangePasswordSerializer(data=request.data)
+#         if not serializer.is_valid():
+#             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        user = request.user
-        old_password = serializer.validated_data.get("old_password")
-        new_password = serializer.validated_data.get("new_password")
+#         user = request.user
+#         old_password = serializer.validated_data.get("old_password")
+#         new_password = serializer.validated_data.get("new_password")
 
-        # 기존 비밀번호가 올바른지 확인
-        if not user.check_password(old_password):
-            return Response(
-                {"detail": "Old password is incorrect."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+#         # 기존 비밀번호가 올바른지 확인
+#         if not user.check_password(old_password):
+#             return Response(
+#                 {"detail": "Old password is incorrect."},
+#                 status=status.HTTP_400_BAD_REQUEST,
+#             )
 
-        # 새로운 비밀번호가 이전 비밀번호와 동일한지 확인
-        if user.check_password(new_password):
-            return Response(
-                {"detail": "새 비밀번호는 이전 비밀번호와 달라야 합니다."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+#         # 새로운 비밀번호가 이전 비밀번호와 동일한지 확인
+#         if user.check_password(new_password):
+#             return Response(
+#                 {"detail": "새 비밀번호는 이전 비밀번호와 달라야 합니다."},
+#                 status=status.HTTP_400_BAD_REQUEST,
+#             )
 
-        # 비밀번호 변경 - 재사용 확인 로직
-        user.check_previous_passwords(new_password)
-        user.save()
+#         # 비밀번호 변경 - 재사용 확인 로직
+#         user.check_previous_passwords(new_password)
+#         user.save()
 
-        return Response(
-            {"detail": "Password changed successfully."}, status=status.HTTP_200_OK
-        )
+#         return Response(
+#             {"detail": "Password changed successfully."}, status=status.HTTP_200_OK
+#         )
 
 
 class LogoutView(APIView):
