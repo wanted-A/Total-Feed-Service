@@ -54,6 +54,7 @@ class Board(CommonModel):
     hashtags = models.ManyToManyField(
         Hashtag,
         related_name='tagging',
+        blank=True,
     )
 
     # likes = models.BooleanField(default=False)
