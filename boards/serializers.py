@@ -4,11 +4,12 @@ from .models import Board, Hashtag
 
 class BoardSerializer(serializers.ModelSerializer):
     owner = serializers.StringRelatedField(read_only=True)
-    hashtags = serializers.SlugRelatedField(
-        many=True,
-        queryset=Hashtag.objects.all(),
-        slug_field="tag",
-    )
+    hashtags = serializers.StringRelatedField(many=True, read_only=True)
+    # hashtags = serializers.SlugRelatedField(
+    #     many=True,
+    #     queryset=Hashtag.objects.all(),
+    #     slug_field="tag",
+    # )
 
     class Meta:
         model = Board
