@@ -150,17 +150,14 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-
-# 이메일 설정
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-
-
 # users 설정
 AUTH_USER_MODEL = "users.User"
 
 # REST_FRAMEWORK
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework.authentication.TokenAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": [
@@ -174,15 +171,26 @@ REST_FRAMEWORK = {
 
 
 # simplejwt 설정
+REST_USE_JWT = True
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
+    "REFRESH_TOKEN_LIFETIME": timedelta(minutes=60),  # 리프레시 토큰 유효 시간
     "ALGORITHM": "HS256",
     "SIGNING_KEY": SECRET_KEY,
     "VERIFYING_KEY": None,
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
+# Swagger 토큰 인증
+SWAGGER_SETTINGS = {
+    "SECURITY_DEFINITIONS": {
+        "DRF Token": {"type": "apiKey", "name": "Authorization", "in": "header"}
+    }
+}
+
+# 이메일 설정
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # 이메일 발송 로직 (가칭)
 # EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
