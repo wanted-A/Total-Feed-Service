@@ -141,11 +141,11 @@ TIME_ZONE = "Asia/Seoul"
 
 DATE_INPUT_FORMATS = ["%Y-%m-%d"]
 
-DATETIME_FORMAT = "Y-m-d H:i:s"
+DATETIME_FORMAT = "%Y년 %m월 %d일 %H시 %M분"
 
 USE_I18N = True
 
-USE_TZ = False
+USE_L10N = True
 
 
 # Static files (CSS, JavaScript, Images)
