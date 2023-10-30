@@ -6,7 +6,6 @@ class BoardSerializer(serializers.ModelSerializer):
     owner = serializers.StringRelatedField(read_only=True)
     hashtags = serializers.SlugRelatedField(
         many=True,
-        read_only=False,
         queryset=Hashtag.objects.all(),
         slug_field="tag",
     )

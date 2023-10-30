@@ -35,10 +35,12 @@ class BoardWriteView(APIView):
             status=status.HTTP_200_OK,
         )
 
-    def post(self, request):
+    def post(self, request, *args, **kwargs):
         serializer = BoardSerializer(data=request.data)
 
         if serializer.is_valid():
+            board = serializer.save(owner=self.request.user)
+
             hashtags_data = request.data.get("hashtags", [])
 
             hashtags_objs = []
@@ -48,7 +50,10 @@ class BoardWriteView(APIView):
                 hashtag_obj, created = Hashtag.objects.get_or_create(tag=hashtag)
                 hashtags_objs.append(hashtag_obj)
 
-            serializer.save(owner=request.user, hashtags=hashtags_objs)
+            board.hashtags.set(hashtags_objs)
+            board.save()
+
+            # serializer.save(owner=request.user, hashtags=hashtags_objs)
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
