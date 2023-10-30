@@ -34,14 +34,7 @@ class PreviousPassword(models.Model):
 
 class User(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(max_length=20, unique=True, blank=False)
-    first_name = models.CharField(max_length=30, blank=True)
-    last_name = models.CharField(max_length=30, blank=True)
     email = models.EmailField(unique=True)
-    profile_picture = models.ImageField(
-        upload_to="assets/profile_pictures",
-        blank=True,
-        null=True,
-    )
     is_approved = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -51,13 +44,6 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     USERNAME_FIELD = "username"
     REQUIRED_FIELDS = ["email"]
-
-    def get_full_name(self):
-        full_name = f"{self.first_name} {self.last_name}".strip()
-        return full_name or self.username
-
-    def get_short_name(self):
-        return self.first_name or self.username.split()[0]
 
     def set_password(self, raw_password):
         """

@@ -29,10 +29,10 @@ ALLOWED_HOSTS = ["*"]
 
 THIRD_PARTY_APPS = [
     "rest_framework",
+    "rest_framework.authtoken",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
     "drf_yasg",  # swagger
-    "django_filters",
 ]
 
 CUSTOM_APPS = [
@@ -86,14 +86,21 @@ WSGI_APPLICATION = "config.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.postgresql",
+#         "NAME": env("DB_NAME"),
+#         "USER": env("DB_USER"),
+#         "PASSWORD": env("DB_PASSWORD"),
+#         "HOST": env("DB_HOST"),
+#         "PORT": env("DB_PORT"),
+#     }
+# }
+
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("DB_NAME"),
-        "USER": env("DB_USER"),
-        "PASSWORD": env("DB_PASSWORD"),
-        "HOST": env("DB_HOST"),
-        "PORT": env("DB_PORT"),
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
 }
 
@@ -116,14 +123,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# DRF 설정
-REST_FRAMEWORK = {
-    "DEFAULT_PERMISSION_CLASSES": [
-        # 전역 설정중 (IsAuthenticated 를 모든 views 에 적용)
-        # 만약 불필요 할 경우, 필요한 views 에서 permission_classes 를 지정하면 됨
-        "rest_framework.permissions.IsAuthenticated",
-    ],
-}
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
@@ -151,31 +150,24 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# simplejwt 설정
 
-SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
-    "SLIDING_TOKEN_REFRESH_LIFETIME": timedelta(days=1),
-    "ROTATE_REFRESH_TOKENS": False,
-    "ALGORITHM": "HS256",
-    "SIGNING_KEY": SECRET_KEY,
-    "VERIFYING_KEY": None,
-    "AUTH_HEADER_TYPES": ("Bearer",),
-    "USER_ID_FIELD": "id",
-    "USER_ID_CLAIM": "user_id",
-    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
-    "TOKEN_TYPE_CLAIM": "token_type",
-    "JTI_CLAIM": "jti",
-    "SLIDING_TOKEN_REFRESH_EXP_CLAIM": "refresh_exp",
-    "TOKEN_BLACKLIST_ENABLED": True,
-    "TOKEN_BLACKLIST_APP": "rest_framework_simplejwt.token_blacklist",
-}
+# 이메일 설정
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
 
 # users 설정
 AUTH_USER_MODEL = "users.User"
 
 # REST_FRAMEWORK
 REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": [
+        # 전역 설정중 (IsAuthenticated 를 모든 views 에 적용)
+        # 만약 불필요 할 경우, 해당 view class 에서 permission_classes 를 지정하면 됨
+        "rest_framework.permissions.IsAuthenticated",
+    ],
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
         "rest_framework.filters.SearchFilter",
@@ -184,3 +176,25 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "boards.pagination.CustomPageNumberPagination",
     "PAGE_SIZE": 10,
 }
+
+
+# simplejwt 설정
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": SECRET_KEY,
+    "VERIFYING_KEY": None,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
+
+
+# 이메일 발송 로직 (가칭)
+# EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+# EMAIL_HOST = "smtp.gmail.com"  # Gmail SMTP 호스트 설정
+# EMAIL_PORT = 587  # SMTP 포트 설정
+# EMAIL_USE_TLS = True  # TLS 사용 여부 설정
+# EMAIL_USE_SSL = False  # SSL 사용 여부 설정
+# EMAIL_HOST_USER = "emailtjfakdlTrpTskdlrp@gmail.com"  # Gmail 이메일 계정
+# EMAIL_HOST_PASSWORD = "testpasswordtjfakdlTrpTsk"  # Gmail 계정 비밀번호
+# DEFAULT_FROM_EMAIL = "emailtjfakdlTrpTskdlrp@gmail.com"  # 기본 발신 이메일 주소
