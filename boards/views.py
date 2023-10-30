@@ -67,9 +67,14 @@ class BoardsListAPIView(ListAPIView):
     ]
 
 
-# api/v1/boards/detail/<int:content_id>/
+# api/v1/boards/<int:content_id>/
 class BoardDetailView(APIView):
-    # board 상세 조회 view
+    """
+    GET : 게시글 상세 조회
+    POST : 게시글 좋아요(좋아요 취소 기능 포함)
+    PUT : 게시글 수정
+    DELETE : 게시글 삭제
+    """
 
     def get_object(self, content_id):
         try:
@@ -79,13 +84,41 @@ class BoardDetailView(APIView):
 
     def get(self, request, content_id):
         board = self.get_object(content_id)
-
         board.viewcounts += 1
         board.save()
-
         serializer = BoardSerializer(board)
-
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request, content_id):
+        board = self.get_object(content_id)
+        user = request.user
+
+        if user.is_anonymous:
+            raise PermissionDenied("로그인이 필요합니다.")
+
+        if board.owner.id == user.id:
+            raise PermissionDenied("자신의 게시물은 좋아요를 누를 수 없습니다.")
+
+        # 좋아요 한번만 누르기(좋아요 취소 기능)
+        if board.liked_users.filter(id=user.id).exists():
+            board.liked_users.remove(user)
+            board.likecounts -= 1
+            board.save()
+            message = "좋아요 취소"
+        else:
+            board.liked_users.add(user)
+            board.likecounts += 1
+            board.save()
+            message = "좋아요"
+
+        return Response({"message": message}, status=status.HTTP_200_OK)
+
+        # 좋아요 무제한 기능(한명이 무제한으로 다른 사람꺼 누르기 가능)
+        # board.likecounts += 1
+        # board.save()
+        # message = "좋아요"
+
+        # return Response({"message": message, "total_likes":board.likecounts}, status=status.HTTP_200_OK)
 
     def put(self, request, content_id):
         board = self.get_object(content_id)
@@ -113,6 +146,55 @@ class BoardDetailView(APIView):
 
         board.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# api/v1/boards/<str:feed_type>/likes/<int:content_id>/
+class BoardLikesView(APIView):
+    """
+    api 호출 시 좋아요 증가(무제한)
+    """
+
+    def get_feed_type(self, feed_type):
+        try:
+            return Board.FeedChoices(feed_type)
+        except ValueError:
+            raise NotFound("해당 피드 타입을 찾을 수 없습니다.")
+
+    def get_content(self, content_id, feed_type):
+        try:
+            return Board.objects.get(content_id=content_id, feed_type=feed_type)
+        except Board.DoesNotExist:
+            raise NotFound("해당 게시물을 찾을 수 없습니다.")
+
+    def get(self, request, feed_type, content_id):
+        try:
+            board = Board.objects.get(feed_type=feed_type, content_id=content_id)
+        except Board.DoesNotExist:
+            raise NotFound("해당 게시물을 찾을 수 없습니다.")
+
+        user = request.user
+        if user.is_anonymous:
+            raise PermissionDenied("로그인이 필요합니다.")
+
+        # 조회 시 좋아요 수 증가
+        board.likecounts += 1
+        board.liked_users.add(user)
+
+        likes = board.liked_users.all()
+        like_users = [{"username": user.username} for user in likes]
+
+        board.save()
+
+        response_data = {
+            "owner": board.owner.username,
+            "feed_type": board.feed_type,
+            "title": board.title,
+            "content": board.content,
+            "like_users": like_users,
+            "like_count": board.likecounts,
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
 
 
 # api/v1/boards/analytics/?query_params
