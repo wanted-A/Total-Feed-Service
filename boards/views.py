@@ -10,15 +10,15 @@ from .models import Board, Hashtag
 from .serializers import BoardSerializer, BoardListSerializer
 
 from django.db.models import Count, Sum
+from django.db.models.functions import Coalesce
+
+from django.db.models import Count, Sum
 
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
 from datetime import datetime, timedelta
 from django.db.models import Q
-
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
 
 
 # api/v1/boards/write/
@@ -260,7 +260,10 @@ class BoardLikesView(APIView):
 
 # api/v1/boards/analytics/?query_params
 class AnalyticsView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    # 사용자 인증 관련 기능 완성시 아래 주석 해제할 것
+    # permission_classes = [permissions.IsAuthenticated]
+
+    # Swagger를 활용한 API 문서 작성을 위한 변수(query_)
 
     query_hashtag = openapi.Parameter(
         "hashtag", openapi.IN_QUERY, type=openapi.TYPE_STRING, description="검색할 해시태그"
@@ -295,6 +298,7 @@ class AnalyticsView(APIView):
         default="count",
     )
 
+    # Swagger를 활용한 API 문서 작성을 위한 데코레이터
     @swagger_auto_schema(
         operation_id="통계",
         operation_description="게시물에 대한 통계를 제공합니다.",
@@ -305,128 +309,148 @@ class AnalyticsView(APIView):
             query_end,
             query_value,
         ],
+        responses={
+            200: "{'result': { 'YYYY-MM-DD': 10, 'YYYY-MM-DD': 11 }}\n{'result': { 'YYYY-MM-DD HH:MM:SS': 10, 'YYYY-MM-DD HH:MM:SS': 11 }}"
+        },
     )
     def get(self, request):
         hashtag = request.query_params.get("hashtag", request.user)
+        hashtag = Hashtag.objects.get(tag=hashtag)
+
         search_type = request.query_params.get("type", "date")
 
+        # 쿼리 파라미터에 종료일이 명시되지 않으면 오늘 날짜로 설정
         end = (
             datetime.strptime(request.query_params.get("end"), "%Y-%m-%d")
             if request.query_params.get("end") is not None
             else datetime.now()
         )
+        # 종료일의 23시 59분 59초로 설정
         end = end.replace(hour=23, minute=59, second=59)
 
+        # 쿼리 파라미터에 시작일이 명시되지 않으면 오늘로부터 7일 전 날짜로 설정
         start = (
             datetime.strptime(request.query_params.get("start"), "%Y-%m-%d")
             if request.query_params.get("start") is not None
             else datetime.now() - timedelta(days=7)
         )
-        start = (
-            datetime.now() - timedelta(days=7)
-            if (end - start) > timedelta(days=7)
-            else start
-        )
+
+        # 날짜 기준 통계를 요청받았을 때, 최대 30일 까지만 조회 가능
+        if (search_type == "date") and (end - start > timedelta(days=30)):
+            start = datetime.now() - timedelta(days=30)
+        # 시간 기준 통계를 요청받았을 때, 최대 7일 까지만 조회 가능
+        elif (search_type == "hour") and (end - start > timedelta(days=7)):
+            start = datetime.now() - timedelta(days=7)
+
+        # 시작일의 0시 0분 0초 0밀리초로 설정
         start = start.replace(hour=0, minute=0, second=0, microsecond=0)
 
         value = request.query_params.get("value", "count")
 
         result = {}
         if value == "count":
+            # 날짜 기준 게시물 갯수 반환
             if search_type == "date":
                 while start <= end:
                     result[datetime.strftime(start, "%Y-%m-%d")] = Board.objects.filter(
-                        hashtags__icontains=hashtag,
+                        hashtags=hashtag.id,
                         created_at__range=[
                             start,
                             start.replace(hour=23, minute=59, second=59),
                         ],
-                    ).aggregate(board_count=Count("title"))
+                    ).aggregate(board_count=Coalesce(Count("title"), 0))
 
                     start += timedelta(days=1)
+            # 시간 기준 게시물 갯수 반환
             else:
                 while start <= end:
                     result[
                         datetime.strftime(start, "%Y-%m-%d %H:%M:%S")
                     ] = Board.objects.filter(
-                        hashtags__icontains=hashtag,
+                        hashtags=hashtag.id,
                         created_at__range=[start, start.replace(minute=59, second=59)],
                     ).aggregate(
-                        board_count=Count("title")
+                        board_count=Coalesce(Count("title"), 0)
                     )
 
                     start += timedelta(hours=1)
         elif value == "view_count":
+            # 날짜 기준 조회수 합계 반환
             if search_type == "date":
                 while start <= end:
                     result[datetime.strftime(start, "%Y-%m-%d")] = Board.objects.filter(
-                        hashtags__icontains=hashtag,
+                        hashtags=hashtag.id,
                         created_at__range=[
                             start,
                             start.replace(hour=23, minute=59, second=59),
                         ],
-                    ).aggregate(total_likes=Sum("viewcounts"))
+                    ).aggregate(total_likes=Coalesce(Sum("viewcounts"), 0))
 
                     start += timedelta(days=1)
+            # 시간 기준 조회수 합계 반환
             else:
                 while start <= end:
                     result[
                         datetime.strftime(start, "%Y-%m-%d %H:%M:%S")
                     ] = Board.objects.filter(
-                        hashtags__icontains=hashtag,
+                        hashtags=hashtag.id,
                         created_at__range=[start, start.replace(minute=59, second=59)],
                     ).aggregate(
-                        total_likes=Sum("viewcounts")
+                        total_likes=Coalesce(Sum("viewcounts"), 0)
                     )
 
                     start += timedelta(hours=1)
         elif value == "like_count":
+            # 날짜 기준 좋아요수 합계 반환
             if search_type == "date":
                 while start <= end:
                     result[datetime.strftime(start, "%Y-%m-%d")] = Board.objects.filter(
-                        hashtags__icontains=hashtag,
+                        hashtags=hashtag.id,
                         created_at__range=[
                             start,
                             start.replace(hour=23, minute=59, second=59),
                         ],
-                    ).aggregate(total_likes=Sum("likecounts"))
+                    ).aggregate(total_likes=Coalesce(Sum("likecounts"), 0))
 
                     start += timedelta(days=1)
+            # 시간 기준 좋아요수 합계 반환
             else:
                 while start <= end:
                     result[
                         datetime.strftime(start, "%Y-%m-%d %H:%M:%S")
                     ] = Board.objects.filter(
-                        hashtags__icontains=hashtag,
+                        hashtags=hashtag.id,
                         created_at__range=[start, start.replace(minute=59, second=59)],
                     ).aggregate(
-                        total_likes=Sum("likecounts")
+                        total_likes=Coalesce(Sum("likecounts"), 0)
                     )
 
                     start += timedelta(hours=1)
         else:
+            # 날짜 기준 공유수 합계 반환
             if search_type == "date":
                 while start <= end:
                     result[datetime.strftime(start, "%Y-%m-%d")] = Board.objects.filter(
-                        hashtags__icontains=hashtag,
+                        hashtags=hashtag.id,
                         created_at__range=[
                             start,
                             start.replace(hour=23, minute=59, second=59),
                         ],
-                    ).aggregate(total_shares=Sum("sharecounts"))
+                    ).aggregate(total_shares=Coalesce(Sum("sharecounts"), 0))
 
                     start += timedelta(days=1)
+            # 시간 기준 공유수 합계 반환
             else:
                 while start <= end:
                     result[
                         datetime.strftime(start, "%Y-%m-%d %H:%M:%S")
                     ] = Board.objects.filter(
-                        hashtags__icontains=hashtag,
+                        hashtags=hashtag.id,
                         created_at__range=[start, start.replace(minute=59, second=59)],
                     ).aggregate(
-                        total_shares=Sum("sharecounts")
+                        total_shares=Coalesce(Sum("sharecounts"), 0)
                     )
 
                     start += timedelta(hours=1)
 
-        return Response({"result": result, "status": status.HTTP_200_OK})
+        return Response({"result": result}, status=status.HTTP_200_OK)

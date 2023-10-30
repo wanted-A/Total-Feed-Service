@@ -34,7 +34,6 @@ class BoardSerializer(serializers.ModelSerializer):
             return obj.updated_at.strftime("%Y년 %m월 %d일 %H시 %M분")
         return None
 
-
 class BoardListSerializer(serializers.ModelSerializer):
     """
     Assignee : 기연
