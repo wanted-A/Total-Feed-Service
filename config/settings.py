@@ -150,11 +150,6 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-
-# 이메일 설정
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-
-
 # users 설정
 AUTH_USER_MODEL = "users.User"
 
@@ -177,33 +172,20 @@ REST_FRAMEWORK = {
 
 # simplejwt 설정
 SIMPLE_JWT = {
-    "TOKEN_OBTAIN_SERIALIZER": "users.serializers.CustomTokenObtainPairSerializer",
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),  # 토큰 유효 시간
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),  # 리프레시 토큰 유효 시간
-    "ROTATE_REFRESH_TOKENS": False,  # 새로고침 토큰 사용 여부
-    "BLACKLIST_AFTER_ROTATION": True,  # 블랙리스트 사용 여부
-    "SIGNING_KEY": SECRET_KEY,
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
+    "REFRESH_TOKEN_LIFETIME": timedelta(minutes=60),  # 리프레시 토큰 유효 시간
     "ALGORITHM": "HS256",
+    "SIGNING_KEY": SECRET_KEY,
     "VERIFYING_KEY": None,
-    "UPDATE_LAST_LOGIN": True,
-    "AUDIENCE": None,
-    "ISSUER": None,
-    "JWK_URL": None,
-    "LEEWAY": 0,
     "AUTH_HEADER_TYPES": ("Bearer",),
-    "USER_ID_CLAIM": "email",  # 사용자의 아이디 JWT 토큰에 저장할 필드
-    "AUTH_TOKEN_CLASSES": (
-        "rest_framework_simplejwt.tokens.UntypedToken",
-        "rest_framework_simplejwt.tokens.AccessToken",
-    ),
-    "TOKEN_TYPE_CLAIM": "token_type",  # 토큰 타입 필드
-    "JTI_CLAIM": "jti",  # JWT ID 필드
-    "TOKEN_USER_CLASS": "users.User",
-    "SLIDING_TOKEN_REFRESH_EXP_CLAIM": "refresh_exp",
-    "SLIDING_TOKEN_LIFETIME": timedelta(minutes=30),
-    "SLIDING_TOKEN_REFRESH_LIFETIME": timedelta(days=1),
 }
 
+# Swagger 토큰 인증
+SWAGGER_SETTINGS = {
+    "SECURITY_DEFINITIONS": {
+        "DRF Token": {"type": "apiKey", "name": "Authorization", "in": "header"}
+    }
+}
 
 # 이메일 발송 로직 (가칭)
 # EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
