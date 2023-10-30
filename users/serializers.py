@@ -36,8 +36,6 @@ class UserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("비밀번호는 최소 한 개의 숫자를 포함해야 합니다.")
         if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", value):
             raise serializers.ValidationError("비밀번호는 최소 한 개의 특수문자를 포함해야 합니다.")
-        if re.search(r"1\d{3}", value):
-            raise serializers.ValidationError("비밀번호에 연속된 숫자를 사용할 수 없습니다.")
         if re.search(r"(.)\1\1", value):
             raise serializers.ValidationError("비밀번호에 같은 문자를 3번 이상 사용할 수 없습니다.")
 
