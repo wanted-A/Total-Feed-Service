@@ -35,25 +35,20 @@ class BoardWriteView(APIView):
             status=status.HTTP_200_OK,
         )
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         serializer = BoardSerializer(data=request.data)
 
         if serializer.is_valid():
-            board = serializer.save(owner=self.request.user)
-
             hashtags_data = request.data.get("hashtags", [])
-
             hashtags_objs = []
 
             for hashtag in hashtags_data:
-                hashtag = hashtag.strip()
-                hashtag_obj, created = Hashtag.objects.get_or_create(tag=hashtag)
-                hashtags_objs.append(hashtag_obj)
+                hashtag, created = Hashtag.objects.get_or_create(tag=hashtag.strip())
+                hashtags_objs.append(hashtag)
 
+            board = serializer.save(owner=request.user)
             board.hashtags.set(hashtags_objs)
             board.save()
-
-            # serializer.save(owner=request.user, hashtags=hashtags_objs)
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
@@ -67,6 +62,7 @@ class BoardListAPIView(APIView):
 
     게시글 목록 조회 및 검색 기능
     """
+
     permission_classes = [permissions.AllowAny]
 
     query_hashtag = openapi.Parameter(
