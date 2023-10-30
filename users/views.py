@@ -5,31 +5,150 @@ from rest_framework.response import Response
 from rest_framework import status, permissions
 from rest_framework.authtoken.models import Token
 from rest_framework import serializers
-from rest_framework.permissions import AllowAny
 
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import User
+
 from .serializers import (
     UserSerializer,
     CustomTokenObtainPairSerializer,
+    LoginSerializer
 )
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
 from rest_framework_simplejwt.tokens import RefreshToken
 
-
-class CustomLoginView(TokenObtainPairView):
-    serializer_class = CustomTokenObtainPairSerializer
+from django.contrib.auth import authenticate, login, logout
 
 
-class ChangePasswordSerializer(serializers.Serializer):
-    old_password = serializers.CharField(required=True)
-    new_password = serializers.CharField(required=True)
+# api/v1/users/register/
+class ResgisterView(APIView):
+    """
+    사용자 정보 API
+    회원가입
 
-    def validate_new_password(self, value):
-        # UserSerializer에서 정의한 비밀번호 유효성 검사 로직을 재사용
-        return UserSerializer().validate_password(value)
+    GET: 등록된 사용자 중 최근 10명의 목록을 반환합니다.
+    POST: 새로운 사용자를 생성합니다.
+    """
+
+    permission_classes = [permissions.AllowAny]
+
+    # def get(self, request):
+    #     users = User.objects.all()[:10]
+    #     serializer = UserSerializer(users, many=True)
+    #     return Response(serializer.data)
+
+    @swagger_auto_schema(request_body=UserSerializer)
+    def post(self, request):
+        serializer = UserSerializer(data=request.data)
+        if serializer.is_valid():
+            # UserSerializer의 create 메서드를 호출하여 새 사용자를 생성
+            user = serializer.save()
+
+            # # 새 사용자가 생성된 후 토큰을 생성
+            # token, created = Token.objects.get_or_create(user=user)
+            
+            # jwt 토큰 접근
+            refresh = RefreshToken.for_user(user)
+            refresh_token = str(refresh)
+            access_token = str(refresh.access_token)
+
+            return Response({
+                "username" : user.username,
+                "message" : "이메일을 인증하여 회원가입을 완료해주세요.",
+                "token": {
+                    "refresh" : refresh_token,
+                    "access" : access_token
+            }}, status=status.HTTP_201_CREATED)
+        
+            # return Response({"token": token.key}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# api/v1/users/login/
+class LoginView(APIView):
+    """
+    로그인 API
+    """
+    permission_classes = [permissions.AllowAny]
+
+    @swagger_auto_schema(request_body=LoginSerializer)
+    def post(self, request):
+        username = request.data.get("username")
+        password = request.data.get("password")
+
+        if username is None or password is None:
+            return Response(
+                {"message": "아이디와 비밀번호를 입력해주세요."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = authenticate(username=username, password=password)
+
+        if user is not None:
+            login(request, user)
+            serializer = UserSerializer(user)
+
+            # jwt 토큰 접근해서 인증 요청
+            token = CustomTokenObtainPairSerializer.get_token(user)
+            refresh_token = str(token)
+            access_token = str(token.access_token)
+
+            res = Response(
+                {"message": "로그인 성공", "data": serializer.data},
+                status=status.HTTP_200_OK,
+            )
+
+            # 세션에 refresh_token 저장
+            request.session["refresh"] = refresh_token
+            # 쿠키에 access_token 저장
+            res.set_cookie("access", access_token, httponly=True)
+
+            return res
+        else:
+            return Response({"message": "아이디 혹은 비밀번호가 틀립니다."})
+
+
+# api/v1/users/logout/
+class LogoutView(APIView):
+    """
+    로그아웃 API
+
+    POST: 로그아웃하고 현재 토큰을 블랙리스트에 추가합니다.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        logout(request)
+        try:
+            # 현재 요청의 사용자의 refresh token을 가져옵니다.
+            refresh_token = (
+                request.auth
+            )  # Assuming this is the refresh token sent by the user.
+            token = RefreshToken(refresh_token)
+
+            # 토큰을 블랙리스트에 추가합니다.
+            token.blacklist()
+
+            return Response({"detail": "Logout successful."}, status=status.HTTP_200_OK)
+        except TokenError:
+            return Response(
+                {"detail": "Invalid token."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+# class CustomLoginView(TokenObtainPairView):
+#     serializer_class = CustomTokenObtainPairSerializer
+
+
+# class ChangePasswordSerializer(serializers.Serializer):
+#     old_password = serializers.CharField(required=True)
+#     new_password = serializers.CharField(required=True)
+
+#     def validate_new_password(self, value):
+#         # UserSerializer에서 정의한 비밀번호 유효성 검사 로직을 재사용
+#         return UserSerializer().validate_password(value)
 
 
 # class ChangePasswordView(APIView):
@@ -71,61 +190,3 @@ class ChangePasswordSerializer(serializers.Serializer):
 #         return Response(
 #             {"detail": "Password changed successfully."}, status=status.HTTP_200_OK
 #         )
-
-
-class LogoutView(APIView):
-
-    """
-    로그아웃 API
-
-    POST: 로그아웃하고 현재 토큰을 블랙리스트에 추가합니다.
-    """
-
-    # permission_classes = [AllowAny]
-    permission_classes = [permissions.IsAuthenticated]
-
-    def post(self, request):
-        # print(request.headers)
-        try:
-            # 현재 요청의 사용자의 refresh token을 가져옵니다.
-            refresh_token = (
-                request.auth
-            )  # Assuming this is the refresh token sent by the user.
-            token = RefreshToken(refresh_token)
-
-            # 토큰을 블랙리스트에 추가합니다.
-            token.blacklist()
-
-            return Response({"detail": "Logout successful."}, status=status.HTTP_200_OK)
-        except TokenError:
-            return Response(
-                {"detail": "Invalid token."}, status=status.HTTP_400_BAD_REQUEST
-            )
-
-
-class UserView(APIView):
-    """
-    사용자 정보 API
-    회원가입
-
-    GET: 등록된 사용자 중 최근 10명의 목록을 반환합니다.
-    POST: 새로운 사용자를 생성합니다.
-    """
-
-    permission_classes = [permissions.AllowAny]
-
-    def get(self, request):
-        users = User.objects.all()[:10]
-        serializer = UserSerializer(users, many=True)
-        return Response(serializer.data)
-
-    @swagger_auto_schema(request_body=UserSerializer)
-    def post(self, request):
-        serializer = UserSerializer(data=request.data)
-        if serializer.is_valid():
-            # UserSerializer의 create 메서드를 호출하여 새 사용자를 생성
-            user = serializer.save()
-            # 새 사용자가 생성된 후 토큰을 생성
-            token, created = Token.objects.get_or_create(user=user)
-            return Response({"token": token.key}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

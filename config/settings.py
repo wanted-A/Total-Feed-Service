@@ -171,8 +171,6 @@ REST_FRAMEWORK = {
 
 
 # simplejwt 설정
-REST_USE_JWT = True
-
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(minutes=60),  # 리프레시 토큰 유효 시간
@@ -188,9 +186,6 @@ SWAGGER_SETTINGS = {
         "DRF Token": {"type": "apiKey", "name": "Authorization", "in": "header"}
     }
 }
-
-# 이메일 설정
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # 이메일 발송 로직 (가칭)
 # EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
