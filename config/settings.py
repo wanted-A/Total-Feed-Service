@@ -86,14 +86,21 @@ WSGI_APPLICATION = "config.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.postgresql",
+#         "NAME": env("DB_NAME"),
+#         "USER": env("DB_USER"),
+#         "PASSWORD": env("DB_PASSWORD"),
+#         "HOST": env("DB_HOST"),
+#         "PORT": env("DB_PORT"),
+#     }
+# }
+
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("DB_NAME"),
-        "USER": env("DB_USER"),
-        "PASSWORD": env("DB_PASSWORD"),
-        "HOST": env("DB_HOST"),
-        "PORT": env("DB_PORT"),
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
 }
 
@@ -134,11 +141,11 @@ TIME_ZONE = "Asia/Seoul"
 
 DATE_INPUT_FORMATS = ["%Y-%m-%d"]
 
-DATETIME_FORMAT = "Y-m-d H:i:s"
+DATETIME_FORMAT = "%Y년 %m월 %d일 %H시 %M분"
 
 USE_I18N = True
 
-USE_TZ = False
+USE_L10N = True
 
 
 # Static files (CSS, JavaScript, Images)
