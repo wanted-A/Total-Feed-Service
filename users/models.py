@@ -26,10 +26,10 @@ class UserManager(BaseUserManager):
 MAX_PREVIOUS_PASSWORDS = 2  # 2개 까지는 중복 비밀번호 불허하나, 3개부터는 재사용을 허가.
 
 
-class PreviousPassword(models.Model):
-    user = models.ForeignKey("User", on_delete=models.CASCADE)
-    password = models.CharField(max_length=128)
-    created_at = models.DateTimeField(auto_now_add=True)
+# class PreviousPassword(models.Model):
+#     user = models.ForeignKey("User", on_delete=models.CASCADE)
+#     password = models.CharField(max_length=128)
+#     created_at = models.DateTimeField(auto_now_add=True)
 
 
 class User(AbstractBaseUser, PermissionsMixin):
@@ -50,24 +50,25 @@ class User(AbstractBaseUser, PermissionsMixin):
         비밀번호를 해시하여 저장
         """
 
-        # 기존 비밀번호가 있을 때만 이전 비밀번호로 저장
-        if self.password and self.pk:  # self.pk를 확인하여 데이터베이스에 이미 저장되었는지 확인.
-            PreviousPassword.objects.create(user=self, password=self.password)
+        #     # 기존 비밀번호가 있을 때만 이전 비밀번호로 저장
+        #     if self.password and self.pk:  # self.pk를 확인하여 데이터베이스에 이미 저장되었는지 확인.
+        #         PreviousPassword.objects.create(user=self, password=self.password)
 
-            # 이전 비밀번호가 설정된 최대 개수를 초과 시, 가장 오래된 것부터 삭제
-            while self.PreviousPassword_set.count() > MAX_PREVIOUS_PASSWORDS:
-                self.PreviousPassword_set.earliest("created_at").delete()
+        #         # 이전 비밀번호가 설정된 최대 개수를 초과 시, 가장 오래된 것부터 삭제
+        #         while self.PreviousPassword_set.count() > MAX_PREVIOUS_PASSWORDS:
+        #             self.PreviousPassword_set.earliest("created_at").delete()
 
-        # 새로운 비밀번호를 해시하여 저장
+        #     # 새로운 비밀번호를 해시하여 저장
         self.password = make_password(raw_password)
         if self.pk:  # 여기도 self.pk를 확인합니다.
             self.save(update_fields=["password"])
 
-    def check_previous_passwords(self, raw_password):
-        """
-        입력된 비밀번호가 이전 비밀번호 중 하나와 일치하는지 확인
-        """
-        return any(
-            check_password(raw_password, prev_pass.password)
-            for prev_pass in self.PreviousPassword_set.all()
-        )
+    # def check_previous_passwords(self, raw_password):
+    #     """
+    #     입력된 비밀번호가 이전 비밀번호 중 하나와 일치하는지 확인
+    #     """
+    #     return any(
+    #         check_password(raw_password, prev_pass.password)
+    #         for prev_pass in self.PreviousPassword_set.all()
+    #     )
+

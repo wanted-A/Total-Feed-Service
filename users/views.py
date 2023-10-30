@@ -186,6 +186,41 @@ class VerifyEmail(APIView):
             )
 
 
+class ChangePasswordView(APIView):
+    """
+    비밀번호 변경 API
+    PUT: 현재 사용자의 비밀번호를 변경합니다.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def put(self, request):
+        user = request.user
+        old_password = request.data.get("old_password")
+        new_password = request.data.get("new_password")
+
+        if not old_password or not new_password:
+            return Response(
+                {"message": "비밀번호를 입력해주세요."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if user.check_password(old_password):
+            if old_password != new_password:
+                user.set_password(new_password)
+                user.save()
+                return Response(
+                    {"message": "비밀번호가 변경되었습니다."}, status=status.HTTP_200_OK
+                )
+            else:
+                return Response(
+                    {"message": "기존 비밀번호와 동일합니다."}, status=status.HTTP_400_BAD_REQUEST
+                )
+        else:
+            return Response(
+                {"message": "비밀번호를 다시 확인하여주세요."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+
 # class CustomLoginView(TokenObtainPairView):
 #     serializer_class = CustomTokenObtainPairSerializer
 
