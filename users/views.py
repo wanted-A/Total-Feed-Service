@@ -1,15 +1,18 @@
+import re
+import environ
+
+env = environ.Env()
+
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework import status, permissions
-from rest_framework.authtoken.models import Token
-from rest_framework import serializers
 
-from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
+
+from .models import User
 
 from .serializers import (
     UserSerializer,
@@ -20,15 +23,13 @@ from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from django.contrib.auth import authenticate, login, logout
+from django.core.mail import send_mail
 
 
 # api/v1/users/register/
 class ResgisterView(APIView):
     """
-    사용자 정보 API
     회원가입
-
-    GET: 등록된 사용자 중 최근 10명의 목록을 반환합니다.
     POST: 새로운 사용자를 생성합니다.
     """
 
@@ -53,6 +54,21 @@ class ResgisterView(APIView):
             refresh = RefreshToken.for_user(user)
             refresh_token = str(refresh)
             access_token = str(refresh.access_token)
+
+            # 이메일 인증메일 보내기
+            current_site = "127.0.0.1:8000"
+            link = "http://" + current_site + "/api/v1/users/verify/" + str(refresh)
+            email_subject = "이메일 인증을 완료해주세요."
+            email_body = (
+                "안녕하세요. " + user.username + "님, \n 아래 링크를 클릭하시면 이메일 인증이 완료됩니다.\n" + link
+            )
+
+            send_mail(
+                email_subject,
+                email_body,
+                env("EMAIL_HOST_USER"),
+                [user.email],
+            )
 
             return Response(
                 {
@@ -142,6 +158,31 @@ class LogoutView(APIView):
         except TokenError:
             return Response(
                 {"detail": "Invalid token."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+class VerifyEmail(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, token):
+        try:
+            token = RefreshToken(token)
+            user = User.objects.get(id=token["user_id"])
+
+            if not user.is_approved:
+                user.is_approved = True
+                user.save()
+                return Response(
+                    {"message": "이메일 인증이 완료되었습니다."}, status=status.HTTP_200_OK
+                )
+            else:
+                return Response(
+                    {"message": "이미 인증된 이메일입니다."}, status=status.HTTP_400_BAD_REQUEST
+                )
+
+        except (InvalidToken, TokenError, User.DoesNotExist):
+            return Response(
+                {"message": "유효하지 않은 토큰입니다."}, status=status.HTTP_400_BAD_REQUEST
             )
 
 

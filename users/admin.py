@@ -18,5 +18,5 @@ class UserAdmin(admin.ModelAdmin):
             },
         ),
     )
-    list_display = ("id", "username", "email")
+    list_display = ("id", "username", "email", "is_approved", "is_active")
     list_display_links = ("id", "username", "email")
