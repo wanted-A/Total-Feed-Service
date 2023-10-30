@@ -56,6 +56,13 @@ class Board(CommonModel):
         related_name='tagging',
     )
 
+    # likes = models.BooleanField(default=False)
+    liked_users = models.ManyToManyField(
+        "users.User",
+        related_name="liked_boards",
+        blank=True,
+    )
+
     viewcounts = models.PositiveIntegerField(default=0)
     likecounts = models.PositiveIntegerField(default=0)
     sharecounts = models.PositiveIntegerField(default=0)
