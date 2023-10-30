@@ -154,11 +154,14 @@ class BoardLikesView(APIView):
     api 호출 시 좋아요 증가(무제한)
     """
 
+    # 수정 할 부분
     def get_feed_type(self, feed_type):
         try:
             return Board.FeedChoices(feed_type)
         except ValueError:
             raise NotFound("해당 피드 타입을 찾을 수 없습니다.")
+    
+    # -> feed_typed 을 불러와서 endpoint로 사용하기
 
     def get_content(self, content_id, feed_type):
         try:
