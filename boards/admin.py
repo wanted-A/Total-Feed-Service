@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Board
+from .models import Board, Hashtag
 
 @admin.register(Board)
 class BoardAdmin(admin.ModelAdmin):
@@ -18,3 +18,5 @@ class BoardAdmin(admin.ModelAdmin):
     )
     
     search_fields = ("title", "feed_type", "user__username")
+
+admin.site.register(Hashtag)

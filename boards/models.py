@@ -1,6 +1,15 @@
 from django.db import models
 from common.models import CommonModel
 
+class Hashtag(models.Model):
+    tag = models.CharField(
+        max_length=30,
+        unique=True,
+        blank=False,
+        null=False)
+
+    def __str__(self):
+        return self.tag
 
 class Board(CommonModel):
     class FeedChoices(models.TextChoices):
@@ -42,10 +51,9 @@ class Board(CommonModel):
         null=True,
     )
 
-    hashtags = models.TextField(
-        max_length=500,
-        blank=True,
-        null=True,
+    hashtags = models.ManyToManyField(
+        Hashtag,
+        related_name='tagging',
     )
 
     # likes = models.BooleanField(default=False)

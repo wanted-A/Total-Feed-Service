@@ -39,15 +39,35 @@ class BoardListSerializer(serializers.ModelSerializer):
     """
     Assignee : 기연
     """
+    hashtags = serializers.StringRelatedField(many=True)
+    owner = serializers.StringRelatedField(read_only=True)
 
     owner = serializers.StringRelatedField(read_only=True)
     liked_users = serializers.StringRelatedField(read_only=True, many=True)
 
     class Meta:
         model = Board
-        fields = "__all__"
+        fields = (
+            "content_id",
+            "owner",
+            "title",
+            "feed_type",
+            "content",
+            "hashtags",
+            "viewcounts",
+            "likecounts",
+            "sharecounts",
+            "created_at",
+            "updated_at",
+        )
+    
+    def to_representation(self, instance):
+        # content 최대 20자 까지만 표현
+        res = super().to_representation(instance)
+        res.update({'content': res['content'][:20]})
+        return res
 
-
+      
 class AnalyticsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Board
