@@ -39,10 +39,6 @@ class BoardListSerializer(serializers.ModelSerializer):
     Assignee : 기연
     """
     hashtags = serializers.StringRelatedField(many=True)
-    owner = serializers.StringRelatedField(read_only=True)
-
-    owner = serializers.StringRelatedField(read_only=True)
-    liked_users = serializers.StringRelatedField(read_only=True, many=True)
 
     class Meta:
         model = Board

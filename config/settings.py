@@ -168,11 +168,6 @@ REST_FRAMEWORK = {
         # 만약 불필요 할 경우, 해당 view class 에서 permission_classes 를 지정하면 됨
         "rest_framework.permissions.IsAuthenticated",
     ],
-    "DEFAULT_FILTER_BACKENDS": [
-        "django_filters.rest_framework.DjangoFilterBackend",
-        "rest_framework.filters.SearchFilter",
-        "rest_framework.filters.OrderingFilter",
-    ],
     "DEFAULT_PAGINATION_CLASS": "boards.pagination.CustomPageNumberPagination",
     "PAGE_SIZE": 10,
 }

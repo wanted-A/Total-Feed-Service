@@ -20,6 +20,7 @@ from drf_yasg import openapi
 from datetime import datetime, timedelta
 from django.db.models import Q
 
+import requests
 
 # api/v1/boards/write/
 class BoardWriteView(APIView):
@@ -257,6 +258,42 @@ class BoardLikesView(APIView):
 
         return Response(response_data, status=status.HTTP_200_OK)
 
+
+# api/v1/boards/share/<content_id> GET
+class BoardShareAPIView(APIView):
+    
+    def get_object(self, content_id):
+        try:
+            return Board.objects.get(content_id=content_id)
+        except Board.DoesNotExist:
+            raise NotFound("해당 게시물을 찾을 수 없습니다.")
+    
+    def get(self, request, content_id):
+        instance = self.get_object(content_id)
+
+        # endpoint
+        endpoint = {
+            "facebook" : "https://www.facebook.com/share/",
+            "twitter" : "https://www.twitter.com/share/",
+            "instagram" : "https://www.instagram.com/share/",
+            "threads" : "https://www.threads.net/share/",
+        }
+        
+        # endpoint로 요청 보내기기
+        request_url = f"{endpoint[instance.feed_type]}{instance.content_id}"
+        response = requests.post(request_url)
+
+        # 요청에 대한 처리
+        if response.status_code == 200:
+            instance.sharecounts += 1
+            instance.save()
+        else:
+            # 실제 서비스 연동 시 실패 응답 리턴
+            # return Response(status=status.HTTP_404_NOT_FOUND)
+            instance.sharecounts += 1
+            instance.save()
+
+        return Response(instance.sharecounts, status=status.HTTP_200_OK)
 
 # api/v1/boards/analytics/?query_params
 class AnalyticsView(APIView):
