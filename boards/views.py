@@ -61,14 +61,13 @@ class BoardWriteView(APIView):
 
 
 # api/v1/boards/?query_params
-class BoardsListAPIView(APIView):
+class BoardListAPIView(APIView):
     """
     Assignee : 기연
 
     게시글 목록 조회 및 검색 기능
     """
-
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
     query_hashtag = openapi.Parameter(
         "hashtag", openapi.IN_QUERY, type=openapi.TYPE_STRING, description="검색할 해시태그"
@@ -132,8 +131,12 @@ class BoardsListAPIView(APIView):
         query = Q()
 
         # hashtag
-        hashtag_instance = Hashtag.objects.get(tag__exact=hashtag)
-        queryset = hashtag_instance.tagging.all()
+        try:
+            hashtag_instance = Hashtag.objects.get(tag__exact=hashtag)
+            queryset = hashtag_instance.tagging.all()
+
+        except Hashtag.DoesNotExist:
+            raise NotFound("해당 태그가 포함된 게시물을 찾을 수 없습니다.")
 
         # type
         if type:
