@@ -14,7 +14,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import (
     UserSerializer,
     CustomTokenObtainPairSerializer,
-    LoginSerializer
+    LoginSerializer,
 )
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -48,20 +48,21 @@ class ResgisterView(APIView):
 
             # # 새 사용자가 생성된 후 토큰을 생성
             # token, created = Token.objects.get_or_create(user=user)
-            
+
             # jwt 토큰 접근
             refresh = RefreshToken.for_user(user)
             refresh_token = str(refresh)
             access_token = str(refresh.access_token)
 
-            return Response({
-                "username" : user.username,
-                "message" : "이메일을 인증하여 회원가입을 완료해주세요.",
-                "token": {
-                    "refresh" : refresh_token,
-                    "access" : access_token
-            }}, status=status.HTTP_201_CREATED)
-        
+            return Response(
+                {
+                    "username": user.username,
+                    "message": "이메일을 인증하여 회원가입을 완료해주세요.",
+                    "token": {"refresh": refresh_token, "access": access_token},
+                },
+                status=status.HTTP_201_CREATED,
+            )
+
             # return Response({"token": token.key}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -71,6 +72,7 @@ class LoginView(APIView):
     """
     로그인 API
     """
+
     permission_classes = [permissions.AllowAny]
 
     @swagger_auto_schema(request_body=LoginSerializer)
@@ -131,7 +133,12 @@ class LogoutView(APIView):
             # 토큰을 블랙리스트에 추가합니다.
             token.blacklist()
 
-            return Response({"detail": "Logout successful."}, status=status.HTTP_200_OK)
+            request.session.flush()
+
+            res = Response({"detail": "Logout successful."}, status=status.HTTP_200_OK)
+            res.delete_cookie("access")
+
+            return res
         except TokenError:
             return Response(
                 {"detail": "Invalid token."}, status=status.HTTP_400_BAD_REQUEST
