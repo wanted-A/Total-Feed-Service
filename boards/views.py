@@ -2,7 +2,7 @@ from rest_framework import status
 from rest_framework import permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.exceptions import NotFound, PermissionDenied
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
 from boards.pagination import CustomPageNumberPagination
 
@@ -12,8 +12,6 @@ from .serializers import BoardSerializer, BoardListSerializer
 from django.db.models import Count, Sum
 from django.db.models.functions import Coalesce
 
-from django.db.models import Count, Sum
-
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
@@ -22,9 +20,12 @@ from django.db.models import Q
 
 import requests
 
+
 # api/v1/boards/write/
 class BoardWriteView(APIView):
-    # board 작성 view
+    """
+    POST : 게시글 작성
+    """
 
     permission_classes = [permissions.IsAuthenticated]
 
@@ -38,22 +39,30 @@ class BoardWriteView(APIView):
         serializer = BoardSerializer(data=request.data)
 
         if serializer.is_valid():
-            serializer.save(owner=request.user)
+            hashtags_data = request.data.get("hashtags", [])
+
+            hashtags_objs = []
+
+            for hashtag in hashtags_data:
+                hashtag = hashtag.strip()
+                hashtag_obj, created = Hashtag.objects.get_or_create(tag=hashtag)
+                hashtags_objs.append(hashtag_obj)
+
+            serializer.save(owner=request.user, hashtags=hashtags_objs)
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
-            return Response(
-                serializer.errors,
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 # api/v1/boards/?query_params
 class BoardsListAPIView(APIView):
     """
     Assignee : 기연
-    
+
     게시글 목록 조회 및 검색 기능
     """
+
     permission_classes = [permissions.IsAuthenticated]
 
     query_hashtag = openapi.Parameter(
@@ -63,10 +72,18 @@ class BoardsListAPIView(APIView):
         "type", openapi.IN_QUERY, type=openapi.TYPE_STRING, description="검색할 feed type"
     )
     query_order_by = openapi.Parameter(
-        "order_by", openapi.IN_QUERY, type=openapi.TYPE_STRING, description="정렬 기준", default="created_at"
+        "order_by",
+        openapi.IN_QUERY,
+        type=openapi.TYPE_STRING,
+        description="정렬 기준",
+        default="created_at",
     )
     query_search_by = openapi.Parameter(
-        "search_by", openapi.IN_QUERY, type=openapi.TYPE_STRING, description="검색기준", default="title,content"
+        "search_by",
+        openapi.IN_QUERY,
+        type=openapi.TYPE_STRING,
+        description="검색기준",
+        default="title,content",
     )
     query_search = openapi.Parameter(
         "search", openapi.IN_QUERY, type=openapi.TYPE_STRING, description="검색 키워드"
@@ -75,7 +92,10 @@ class BoardsListAPIView(APIView):
         "page", openapi.IN_QUERY, type=openapi.TYPE_NUMBER, description="페이지번호"
     )
     query_page_count = openapi.Parameter(
-        "page_count", openapi.IN_QUERY, type=openapi.TYPE_NUMBER, description="페이지당 게시글 갯수"
+        "page_count",
+        openapi.IN_QUERY,
+        type=openapi.TYPE_NUMBER,
+        description="페이지당 게시글 갯수",
     )
 
     @swagger_auto_schema(
@@ -88,34 +108,41 @@ class BoardsListAPIView(APIView):
             query_search_by,
             query_search,
             query_page,
-            query_page_count
+            query_page_count,
         ],
     )
     def get(self, request):
-        hashtag = request.query_params.get('hashtag', request.user) # 태그 검색 키워드 / defalut : 본인계정
-        type = request.query_params.get('type', '') # feed_type : facebook, instagram, etc.
-        order_by = request.query_params.get('order_by', 'created_at') # 정렬 기준
-        search_by = request.query_params.get('search_by', 'title,content') # 키워드 검색 기준(title, content, title+content)
-        search = request.query_params.get('search', '') # 검색 키워드
+        hashtag = request.query_params.get(
+            "hashtag", request.user
+        )  # 태그 검색 키워드 / defalut : 본인계정
+        type = request.query_params.get(
+            "type", ""
+        )  # feed_type : facebook, instagram, etc.
+        order_by = request.query_params.get("order_by", "created_at")  # 정렬 기준
+        search_by = request.query_params.get(
+            "search_by", "title,content"
+        )  # 키워드 검색 기준(title, content, title+content)
+        search = request.query_params.get("search", "")  # 검색 키워드
 
         query = Q()
-        
+
         # hashtag
         hashtag_instance = Hashtag.objects.get(tag__exact=hashtag)
         queryset = hashtag_instance.tagging.all()
 
         # type
-        if type: query |= Q(feed_type=type)
+        if type:
+            query |= Q(feed_type=type)
 
         # search
         if search:
-            if search_by == 'title':
+            if search_by == "title":
                 query |= Q(title__contains=search)
-            elif search_by == 'content':
+            elif search_by == "content":
                 query |= Q(content__contains=search)
             else:
-                query |= (Q(title__contains=search) & Q(content__contains=search))
-        
+                query |= Q(title__contains=search) & Q(content__contains=search)
+
         queryset = queryset.filter(query).order_by(order_by)
 
         # 페이지네이션 적용
@@ -144,7 +171,7 @@ class BoardDetailView(APIView):
     def get(self, request, content_id):
         board = self.get_object(content_id)
         board.viewcounts += 1
-        board.save()
+        board.save(update_fields=["viewcounts"])
         serializer = BoardSerializer(board)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -162,12 +189,12 @@ class BoardDetailView(APIView):
         if board.liked_users.filter(id=user.id).exists():
             board.liked_users.remove(user)
             board.likecounts -= 1
-            board.save()
+            board.save(update_fields=["likecounts"])
             message = "좋아요 취소"
         else:
             board.liked_users.add(user)
             board.likecounts += 1
-            board.save()
+            board.save(update_fields=["likecounts"])
             message = "좋아요"
 
         return Response({"message": message}, status=status.HTTP_200_OK)
@@ -207,78 +234,84 @@ class BoardDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-# api/v1/boards/<str:feed_type>/likes/<int:content_id>/
-class BoardLikesView(APIView):
-    """
-    api 호출 시 좋아요 증가(무제한)
-    """
-
-    # 수정 할 부분
-    def get_feed_type(self, feed_type):
-        try:
-            return Board.FeedChoices(feed_type)
-        except ValueError:
-            raise NotFound("해당 피드 타입을 찾을 수 없습니다.")
-    
-    # -> feed_typed 을 불러와서 endpoint로 사용하기
-
-    def get_content(self, content_id, feed_type):
-        try:
-            return Board.objects.get(content_id=content_id, feed_type=feed_type)
-        except Board.DoesNotExist:
-            raise NotFound("해당 게시물을 찾을 수 없습니다.")
-
-    def get(self, request, feed_type, content_id):
-        try:
-            board = Board.objects.get(feed_type=feed_type, content_id=content_id)
-        except Board.DoesNotExist:
-            raise NotFound("해당 게시물을 찾을 수 없습니다.")
-
-        user = request.user
-        if user.is_anonymous:
-            raise PermissionDenied("로그인이 필요합니다.")
-
-        # 조회 시 좋아요 수 증가
-        board.likecounts += 1
-        board.liked_users.add(user)
-
-        likes = board.liked_users.all()
-        like_users = [{"username": user.username} for user in likes]
-
-        board.save()
-
-        response_data = {
-            "owner": board.owner.username,
-            "feed_type": board.feed_type,
-            "title": board.title,
-            "content": board.content,
-            "like_users": like_users,
-            "like_count": board.likecounts,
-        }
-
-        return Response(response_data, status=status.HTTP_200_OK)
-
-
-# api/v1/boards/share/<content_id> GET
-class BoardShareAPIView(APIView):
-    
+# api/v1/boards/likes/<int:content_id>/
+class BoardLikesAPIView(APIView):
     def get_object(self, content_id):
         try:
             return Board.objects.get(content_id=content_id)
         except Board.DoesNotExist:
             raise NotFound("해당 게시물을 찾을 수 없습니다.")
-    
+
+    def get(self, request, content_id):
+        instance = self.get_object(content_id)
+
+        user = request.user
+        if user.is_anonymous:
+            raise PermissionDenied("로그인이 필요합니다.")
+
+        # 현재 로그인 된 사용자가 게시글의 주인이라면 좋아요 수를 증가시키지 않음
+        if instance.owner == user:
+            raise ValidationError("자신의 게시물에는 좋아요를 누를 수 없습니다.")
+
+        # endpoint
+        endpoint = {
+            "facebook": "https://www.facebook.com/likes/",
+            "twitter": "https://www.twitter.com/likes/",
+            "instagram": "https://www.instagram.com/likes/",
+            "threads": "https://www.threads.net/likes/",
+        }
+
+        # endpoint로 요청 보내기
+        request_url = f"{endpoint[instance.feed_type]}{instance.content_id}"
+        response = requests.get(request_url)
+
+        if response.status_code == 200:
+            instance.likecounts += 1
+            instance.liked_users.add(user)
+
+            likes = instance.liked_users.all()
+            like_users = [{"username": user.username} for user in likes]
+
+            instance.save()
+
+            response_data = {
+                "owner": instance.owner.username,
+                "feed_type": instance.feed_type,
+                "title": instance.title,
+                "content": instance.content,
+                "like_users": like_users,
+                "like_count": instance.likecounts,
+            }
+
+            return Response(response_data, status=status.HTTP_200_OK)
+        else:
+            # 실제 서비스 연동 시 실패 응답 리턴
+            # return Response(status=status.HTTP_404_NOT_FOUND)
+            instance.likecounts += 1
+            instance.save()
+
+        return Response(instance.likecounts, status=status.HTTP_200_OK)
+
+
+# api/v1/boards/share/<content_id> GET
+class BoardShareAPIView(APIView):
+    def get_object(self, content_id):
+        try:
+            return Board.objects.get(content_id=content_id)
+        except Board.DoesNotExist:
+            raise NotFound("해당 게시물을 찾을 수 없습니다.")
+
     def get(self, request, content_id):
         instance = self.get_object(content_id)
 
         # endpoint
         endpoint = {
-            "facebook" : "https://www.facebook.com/share/",
-            "twitter" : "https://www.twitter.com/share/",
-            "instagram" : "https://www.instagram.com/share/",
-            "threads" : "https://www.threads.net/share/",
+            "facebook": "https://www.facebook.com/share/",
+            "twitter": "https://www.twitter.com/share/",
+            "instagram": "https://www.instagram.com/share/",
+            "threads": "https://www.threads.net/share/",
         }
-        
+
         # endpoint로 요청 보내기기
         request_url = f"{endpoint[instance.feed_type]}{instance.content_id}"
         response = requests.post(request_url)
@@ -294,6 +327,7 @@ class BoardShareAPIView(APIView):
             instance.save()
 
         return Response(instance.sharecounts, status=status.HTTP_200_OK)
+
 
 # api/v1/boards/analytics/?query_params
 class AnalyticsView(APIView):

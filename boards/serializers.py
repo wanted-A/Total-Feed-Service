@@ -1,11 +1,15 @@
 from rest_framework import serializers
-from .models import Board
+from .models import Board, Hashtag
 
 
 class BoardSerializer(serializers.ModelSerializer):
     owner = serializers.StringRelatedField(read_only=True)
-    created_at = serializers.SerializerMethodField()
-    updated_at = serializers.SerializerMethodField()
+    hashtags = serializers.SlugRelatedField(
+        many=True,
+        read_only=False,
+        queryset=Hashtag.objects.all(),
+        slug_field="tag",
+    )
 
     class Meta:
         model = Board
@@ -24,20 +28,12 @@ class BoardSerializer(serializers.ModelSerializer):
             "updated_at",
         )
 
-    def get_created_at(self, obj):
-        if obj.created_at:
-            return obj.created_at.strftime("%Y년 %m월 %d일 %H시 %M분")
-        return None
-
-    def get_updated_at(self, obj):
-        if obj.updated_at:
-            return obj.updated_at.strftime("%Y년 %m월 %d일 %H시 %M분")
-        return None
 
 class BoardListSerializer(serializers.ModelSerializer):
     """
     Assignee : 기연
     """
+
     hashtags = serializers.StringRelatedField(many=True)
 
     class Meta:
@@ -55,14 +51,14 @@ class BoardListSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         )
-    
+
     def to_representation(self, instance):
         # content 최대 20자 까지만 표현
         res = super().to_representation(instance)
-        res.update({'content': res['content'][:20]})
+        res.update({"content": res["content"][:20]})
         return res
 
-      
+
 class AnalyticsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Board
